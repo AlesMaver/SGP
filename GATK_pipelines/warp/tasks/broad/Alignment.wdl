@@ -113,6 +113,8 @@ task SamToFastqAndBwaMemAndMba {
     preemptible: preemptible_tries
     memory: "14 GiB"
     cpu: "16"
+    requested_memory_mb_per_core: 1000
+    runtime_minutes: 1200
     disks: "local-disk " + disk_size + " HDD"
   }
   output {
