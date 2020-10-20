@@ -141,6 +141,7 @@ task SamSplitter {
     total_reads=$(samtools view -c ~{input_bam})
 
     java -Dsamjdk.compression_level=~{compression_level} -Xms3000m -jar /usr/gitc/picard.jar SplitSamByNumberOfReads \
+      VALIDATION_STRINGENCY=SILENT \
       INPUT=~{input_bam} \
       OUTPUT=output_dir \
       SPLIT_TO_N_READS=~{n_reads} \
