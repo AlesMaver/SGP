@@ -156,6 +156,8 @@ task SamSplitter {
     docker: "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.4.3-1564508330"
     preemptible: preemptible_tries
     memory: "3.75 GiB"
+    cpu: "2"
+    requested_memory_mb_per_core: 2000
     disks: "local-disk " + disk_size + " HDD"
   }
 }
