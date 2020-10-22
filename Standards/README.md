@@ -17,7 +17,7 @@ Delovni tok | Povezava | Opis
 WholeGenomeGermlineSingleSample_v2.0 | [link](https://github.com/broadinstitute/warp/tree/develop/pipelines/broad/dna_seq/germline/single_sample/wgs) | Iz opisa Broadovega repozitorija: The Whole Genome Germline Single Sample pipeline implements data pre-processing and initial variant calling according to the GATK Best Practices (June 2016) for germline SNP and Indel discovery in human whole-genome sequencing data.
 * Repozitorij je zrcaljen v repozitoriju SGP in bo spreminjan po potrebi projekta (vendar z ohranitvijo ključnih korakov priporočil dobre prakse)
 
-## Jezik analitičnih poti
+## Jezik delovnih tokov
 Format | Opis | Specifikacije | Program za izvedbo
 --- | --- | --- | ---
 WDL | Workflow definition language | [WDL 1.0](https://github.com/openwdl/wdl/blob/main/versions/1.0/SPEC.md) | [Cromwell](https://github.com/broadinstitute/cromwell/)
