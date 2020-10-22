@@ -1,15 +1,40 @@
-# Format and analysis specifications - PROPOSAL
-## Input files
-Input | Format | Description
+# Oblika zbranih podatkov in specifikacije analize - Predlog (SI)
+## Vhodni podatki
+Vhodni podatek | Format | Imenovanje | Opis
+--- | --- | --- | ---
+Nenalegana branja | uBAM | SGP00001.WGS.ubam | Zaporedja v binarni obliki (BAM) brez podatka o položaju na genomu (nenalegana branja). Format uBAM ima pred FASTQ prednost, da vsebuje več informacij o izvoru in skupinah branj. 
+* Vhodne podatke je mogoče po opravljenih primarnih analizah zbrisati, saj datoteka CRAM vsebuje izvornih informacij in je mogoče regenerirati BAM in FASTQ datoteke. 
+
+## Rezultati analiz
+Rezultat | Format | Imenovanje | Opis
+--- | --- | --- | ---
+Nalegana branja | CRAM | SGP00001.WGS.hg38.cram (.crai) | Binarni format naleganih branj, ki uporablja vhodno genomsko referenco za opis razlik med naleganim branjem in referenčnim zapisom genoma.
+Genomske različice | gVCF (gzip) | SGP00001.WGS.hg38.gvcf.gz | Oblika hranjenja podatkov o različicah, ki vsebuje podatke o zanesljivosti detekcije različic tako na vseh mestih (tako na mestih označenih različic kakor tudi na vseh ostalih mestih genoma). Ta format podatkov omogoča tudi detekcijo genetskih različic v sledečih kohortnih analizah. 
+
+## Uporabljene analitične poti
+Pipeline | Povezava | Opis
 --- | --- | ---
-Unmapped reads | uBAM | Binary unaligned read files in a single BAM file, that keeps the read group and other information. Preferrable to FASTQ for data storage. 
+WholeGenomeGermlineSingleSample_v2.0 | [link](https://github.com/broadinstitute/warp/tree/develop/pipelines/broad/dna_seq/germline/single_sample/wgs) | Iz opisa Broadovega repozitorija: The Whole Genome Germline Single Sample pipeline implements data pre-processing and initial variant calling according to the GATK Best Practices (June 2016) for germline SNP and Indel discovery in human whole-genome sequencing data.
+* Repozitorij je zrcaljen v repozitoriju SGP in bo spreminjan po potrebi projekta (vendar z ohranitvijo ključnih korakov priporočil dobre prakse)
+
+## Jezik analitičnih poti
+Format | Opis | Specifikacije | Program za izvedbo
+--- | --- | --- | ---
+WDL | Workflow definition language | [WDL 1.0](https://github.com/openwdl/wdl/blob/main/versions/1.0/SPEC.md) | [Cromwell](https://github.com/broadinstitute/cromwell/)
+
+
+# Format and analysis specifications - PROPOSAL (EN)
+## Input files
+Input | Format | Naming | Description
+--- | --- | --- | ---
+Unmapped reads | uBAM | SGP00001.WGS.ubam | Binary unaligned read files in a single BAM file, that keeps the read group and other information. Preferrable to FASTQ for data storage. 
 * The input files may be deleted after the complete project analysis is complete as the relevant information is all contained in the output files
 
 ## Output files
-Output | Format | Description
---- | --- | ---
-Aligned reads | CRAM | Binary alignment format that uses a genomic reference to describe differences between the aligned sequence fragments and the reference sequence
-Variant calls | gVCF (gzipped) | A variant storage format that contains the information on variant calls and variation likelihoods across the whole genome (including likelihoods for vairant and invariant sites). This format also serves as the input for variant calling in cohort mode. 
+Output | Format | Naming | Description
+--- | --- | --- | ---
+Aligned reads | CRAM | SGP00001.WGS.hg38.cram (.crai) | Binary alignment format that uses a genomic reference to describe differences between the aligned sequence fragments and the reference sequence
+Variant calls | gVCF (gzipped) | SGP00001.WGS.hg38.gvcf.gz | A variant storage format that contains the information on variant calls and variation likelihoods across the whole genome (including likelihoods for vairant and invariant sites). This format also serves as the input for variant calling in cohort mode. 
 
 ## Production pipelines
 Pipeline | Location | Description
