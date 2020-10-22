@@ -11,9 +11,15 @@ Output | Format | Description
 Aligned reads | CRAM | Binary alignment format that uses a genomic reference to describe differences between the aligned sequence fragments and the reference sequence
 Variant calls | gVCF (gzipped) | A variant storage format that contains the information on variant calls and variation likelihoods across the whole genome (including likelihoods for vairant and invariant sites). This format also serves as the input for variant calling in cohort mode. 
 
-## Accepted pipelines for production
+## Production pipelines
 Pipeline | Location | Description
 --- | --- | ---
 WholeGenomeGermlineSingleSample_v2.0 | [link](https://github.com/broadinstitute/warp/tree/develop/pipelines/broad/dna_seq/germline/single_sample/wgs) | From the Broad's repo: The Whole Genome Germline Single Sample pipeline implements data pre-processing and initial variant calling according to the GATK Best Practices (June 2016) for germline SNP and Indel discovery in human whole-genome sequencing data.
+
+## Pipeline language definition
+Format | Description | Specs 
+--- | --- | ---
+WDL | Workflow definition language | [The specifications] (https://github.com/openwdl/wdl/blob/main/versions/1.0/SPEC.md)
+
 
 * The pipeline is mirrored in our GitHub repo and will be modified in accordance to the needs of our project (while maintaining compliance with GATK best practice guidelines)
