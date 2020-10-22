@@ -1,5 +1,5 @@
 <img src="https://www.kclj.si/dokumenti/SGP_SloGenProjekt_001.png" width="15%"> 
-#Slovenski genomski projekt / Slovenian genome project
+# Slovenski genomski projekt / Slovenian genome project
 
 Ta repozitorij je uradni repozitorij Slovenskega genomskega projekta. Vseboval bo izvorno kodo analitičnih poti, standardov in priporočil dobre prakse za analizo podatkov celotnega genoma, ki jih bomo opravili v sklopu 2. delovnega sklopa projekta (DS2). 
 
