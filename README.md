@@ -9,10 +9,10 @@ This code repository is an official repository of the Slovenian genome project. 
 
 ## Aims of the Data analysis group in SGP
 This work package has several goals
-1. Select the state-of-the-art standards for genomic data storage and analysis
-2. Implement the current pipelines for whole genome sequencing data
-3. Enable connections with other genome sequencing initiatives (1M+ genomes initiative by the EU Commission)
-4. Develop a resource of variability in the Slovenian population
+1. Select the state-of-the-art standards for genomic data storage and analysis of the Slovenian genome project sequencing data
+2. Implement the current best practice pipelines for WGS data generated during the project
+3. Enable connections and alignment with other genome sequencing initiatives (1M+ genomes initiative by the EU Commission)
+4. Develop a resource of variability in the Slovenian population 
 
 ## The contents
 This repository is organized in the following main sections
