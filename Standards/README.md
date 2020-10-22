@@ -54,9 +54,9 @@ GATK resource bundle hg38 | Homo_sapiens_assembly38.haplotype_database.txt | DA
 GATK resource bundle hg38 | wgs_coverage_regions.hg38.interval_list | DA
 GATK resource bundle hg38 | Homo_sapiens_assembly38.haplotype_database.txt ./wgs_test_reference/ | DA
 GATK resource bundle hg38 | wgs_coverage_regions.hg38.interval_list ./wgs_test_reference/ | DA
-
-#
-#
+  
+  
+  
 # Format and analysis specifications - PROPOSAL (EN)
 ## Input files
 Input | Format | Naming | Description
