@@ -14,6 +14,6 @@ Variant calls | gVCF (gzipped) | A variant storage format that contains the info
 ## Accepted pipelines for production
 Pipeline | Location | Description
 --- | --- | ---
-WholeGenomeGermlineSingleSample_v2.0 | [link](https://github.com/broadinstitute/warp/tree/develop/pipelines/broad/dna_seq/germline/single_sample/wgs) | The Whole Genome Germline Single Sample pipeline implements data pre-processing and initial variant calling according to the GATK Best Practices (June 2016) for germline SNP and Indel discovery in human whole-genome sequencing data.
+WholeGenomeGermlineSingleSample_v2.0 | [link](https://github.com/broadinstitute/warp/tree/develop/pipelines/broad/dna_seq/germline/single_sample/wgs) | From the Broad's repo: The Whole Genome Germline Single Sample pipeline implements data pre-processing and initial variant calling according to the GATK Best Practices (June 2016) for germline SNP and Indel discovery in human whole-genome sequencing data.
 
 * The pipeline is mirrored in our GitHub repo and will be modified in accordance to the needs of our project (while maintaining compliance with GATK best practice guidelines)
