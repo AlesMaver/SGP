@@ -1,5 +1,6 @@
 <img align="left" src="https://github.com/AlesMaver/SGP/blob/master/Other/SGP_small.png" width="15%">
 
+\
 # Slovenski genomski projekt / Slovenian genome project (SGP)
 Ta repozitorij je uradni repozitorij Slovenskega genomskega projekta. Vseboval bo izvorno kodo analitičnih poti, standardov in priporočil dobre prakse za analizo podatkov celotnega genoma, ki jih bomo opravili v sklopu 2. delovnega sklopa projekta (DS2). 
 
