@@ -20,4 +20,4 @@ WholeGenomeGermlineSingleSample_v2.0 | [link](https://github.com/broadinstitute/
 ## Pipeline language definition
 Format | Description | Specs | Execution engine
 --- | --- | --- | ---
-WDL | Workflow definition language | [WDL 1.0](https://github.com/openwdl/wdl/blob/main/versions/1.0/SPEC.md) | [Cromwell] (https://github.com/broadinstitute/cromwell/)
+WDL | Workflow definition language | [WDL 1.0](https://github.com/openwdl/wdl/blob/main/versions/1.0/SPEC.md) | [Cromwell](https://github.com/broadinstitute/cromwell/)
