@@ -7,7 +7,9 @@ This repository is written predominantly in the workflow definition language (WD
 
 The current contents are as follows:
 * The [Broad's warp pipeline repository](https://github.com/broadinstitute/warp) containing pipelines, which are proposed to serve as the best practice workflows for processing of sequence reads and generating the CRAM and GVCF files
+   The updates to the original warp repo are as follows:
   * MODIFICATION: Corrected missing input_bam_index entries in several calls, which was causing the pipeline to fail
+  * MODIFICATION: Multiple updates to runtime parameters to improve prioritization on SLURM clusters
   * PROPOSED MODIFICATION: Allow input of two FASTQ files and their conversion to uBAM as inputs
   * PROPOSED MODIFICATION: Always output CRAM files rather than BAM. The genome reference should be included in the CRAM file name, ie. with "_hg38_" label
   
