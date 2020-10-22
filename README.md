@@ -6,6 +6,8 @@ Ta repozitorij je uradni repozitorij Slovenskega genomskega projekta. Vseboval b
 
 This code repository is an official repository of the Slovenian genome project. It will contain the pipelines, accepted standards and guidelines for processing of whole genome sequencing data withing work package 2 (WP2). 
 
+<img  align="right" src="https://github.com/AlesMaver/SGP/blob/master/Other/WP2.jpg" width="10%">
+
 ## Aims of the Data analysis group in SGP
 This work package has several goals
 1. Select the state-of-the-art standards for genomic data storage and analysis
