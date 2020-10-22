@@ -1,4 +1,4 @@
-# Data formats specification - PROPOSAL
+# Format and analysis specifications - PROPOSAL
 ## Input files
 Input | Format | Description
 --- | --- | ---
