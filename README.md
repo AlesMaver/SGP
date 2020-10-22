@@ -1,4 +1,4 @@
-<img align="left" src="https://github.com/AlesMaver/SGP/blob/master/Other/SGP_small.png" width="20%">
+<img align="left" src="https://github.com/AlesMaver/SGP/blob/master/Other/SGP_small.png" width="30%">
 
 # Slovenski genomski projekt / Slovenian genome project (SGP)
 
