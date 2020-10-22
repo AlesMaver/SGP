@@ -1,14 +1,15 @@
 # Data formats specification - PROPOSAL
-## Input files for the pipeline
+## Input files
 Input | Format | Description
 --- | --- | ---
 Unmapped reads | uBAM | Binary unaligned read files in a single BAM file, that keeps the read group and other information. Preferrable to FASTQ for data storage. 
+* The input files may be deleted after the complete project analysis is complete as the relevant information is all contained in the output files
 
 ## Output files
 Output | Format | Description
 --- | --- | ---
 Aligned reads | CRAM | Binary alignment format that uses a genomic reference to describe differences between the aligned sequence fragments and the reference sequence
-Variant calls | gVCF (gzipped) | A variant storage format that contains the information on variant calls and variation likelihoods across the whole genome (including likelihoods for vairant and invariant sites). 
+Variant calls | gVCF (gzipped) | A variant storage format that contains the information on variant calls and variation likelihoods across the whole genome (including likelihoods for vairant and invariant sites). This format also serves as the input for variant calling in cohort mode. 
 
 ## Accepted pipelines for production
 Pipeline | Location | Description
