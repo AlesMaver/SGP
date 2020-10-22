@@ -1,4 +1,4 @@
-<img src="https://www.kclj.si/dokumenti/SGP_SloGenProjekt_001.png" width="10%">.
+<img src="https://www.kclj.si/dokumenti/SGP_SloGenProjekt_001.png" width="20%">.
 # SGP
 # Slovenski genomski projekt / Slovenian genome project
 
