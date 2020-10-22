@@ -12,7 +12,7 @@ Nalegana branja | CRAM | SGP00001.WGS.hg38.cram (.crai) | Binarni format nalegan
 Genomske različice | gVCF (gzip) | SGP00001.WGS.hg38.gvcf.gz | Oblika hranjenja podatkov o različicah, ki vsebuje podatke o zanesljivosti detekcije različic tako na vseh mestih (tako na mestih označenih različic kakor tudi na vseh ostalih mestih genoma). Ta format podatkov omogoča tudi detekcijo genetskih različic v sledečih kohortnih analizah. 
 
 ## Uporabljeni delovni tokovi
-Pipeline | Povezava | Opis
+Delovni tok | Povezava | Opis
 --- | --- | ---
 WholeGenomeGermlineSingleSample_v2.0 | [link](https://github.com/broadinstitute/warp/tree/develop/pipelines/broad/dna_seq/germline/single_sample/wgs) | Iz opisa Broadovega repozitorija: The Whole Genome Germline Single Sample pipeline implements data pre-processing and initial variant calling according to the GATK Best Practices (June 2016) for germline SNP and Indel discovery in human whole-genome sequencing data.
 * Repozitorij je zrcaljen v repozitoriju SGP in bo spreminjan po potrebi projekta (vendar z ohranitvijo ključnih korakov priporočil dobre prakse)
