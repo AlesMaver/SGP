@@ -22,7 +22,41 @@ Format | Opis | Specifikacije | Program za izvedbo
 --- | --- | --- | ---
 WDL | Workflow definition language | [WDL 1.0](https://github.com/openwdl/wdl/blob/main/versions/1.0/SPEC.md) | [Cromwell](https://github.com/broadinstitute/cromwell/)
 
+# Referenčni podatki - Predlog
+Za namene Slovenskega genomskega projekta bomo uporabljali genomski sestav v različici hg38
 
+Pri analizah bomo uporabljali naslednje referenčne podatke, ki so na voljo na naslovu : gs://gcp-public-data--broad-references/hg38/v0/
+
+Opis vira | Datoteka | V uporabi
+--- | --- | ---
+GATK resource bundle hg38 | contamination-resources/1000g/1000g.phase3.100k.b38.vcf.gz.dat.UD | DA
+GATK resource bundle hg38 | contamination-resources/1000g/1000g.phase3.100k.b38.vcf.gz.dat.bed | DA
+GATK resource bundle hg38 | contamination-resources/1000g/1000g.phase3.100k.b38.vcf.gz.dat.mu | DA
+GATK resource bundle hg38 | contamination-resources/ | DA
+GATK resource bundle hg38 | wgs_calling_regions.hg38.interval_list | DA
+GATK resource bundle hg38 | Homo_sapiens_assembly38.dict | DA
+GATK resource bundle hg38 | Homo_sapiens_assembly38.fasta | DA
+GATK resource bundle hg38 | Homo_sapiens_assembly38.fasta.fai | DA
+GATK resource bundle hg38 | Homo_sapiens_assembly38.fasta.64.alt | DA
+GATK resource bundle hg38 | Homo_sapiens_assembly38.fasta.64.sa | DA
+GATK resource bundle hg38 | Homo_sapiens_assembly38.fasta.64.amb | DA
+GATK resource bundle hg38 | Homo_sapiens_assembly38.fasta.64.bwt | DA
+GATK resource bundle hg38 | Homo_sapiens_assembly38.fasta.64.ann | DA
+GATK resource bundle hg38 | Homo_sapiens_assembly38.fasta.64.pac | DA
+GATK resource bundle hg38 | Mills_and_1000G_gold_standard.indels.hg38.vcf.gz | DA
+GATK resource bundle hg38 | Homo_sapiens_assembly38.known_indels.vcf.gz | DA
+GATK resource bundle hg38 | Mills_and_1000G_gold_standard.indels.hg38.vcf.gz.tbi | DA
+GATK resource bundle hg38 | Homo_sapiens_assembly38.known_indels.vcf.gz.tbi | DA
+GATK resource bundle hg38 | Homo_sapiens_assembly38.dbsnp138.vcf | DA
+GATK resource bundle hg38 | Homo_sapiens_assembly38.dbsnp138.vcf.idx | DA
+GATK resource bundle hg38 | wgs_evaluation_regions.hg38.interval_list | DA
+GATK resource bundle hg38 | Homo_sapiens_assembly38.haplotype_database.txt | DA
+GATK resource bundle hg38 | wgs_coverage_regions.hg38.interval_list | DA
+GATK resource bundle hg38 | Homo_sapiens_assembly38.haplotype_database.txt ./wgs_test_reference/ | DA
+GATK resource bundle hg38 | wgs_coverage_regions.hg38.interval_list ./wgs_test_reference/ | DA
+
+#
+#
 # Format and analysis specifications - PROPOSAL (EN)
 ## Input files
 Input | Format | Naming | Description
