@@ -11,3 +11,4 @@ This repository is organized in the following main sections
 * **GATK_pipeline** This folder contains the relevant code of the primary pipeline used for data processing, including the modifications and additions by WP2 team
 * **Standards** This folder contains the information on the accepted formats, standards and guidelines for data processing
 * **Projects** This folder analysis projects contributed by the WP2 team
+* **Other** Assorted files and documents
