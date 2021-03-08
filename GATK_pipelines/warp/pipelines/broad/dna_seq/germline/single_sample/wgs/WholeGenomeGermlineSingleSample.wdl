@@ -74,7 +74,7 @@ workflow WholeGenomeGermlineSingleSample {
       sample_name = sample_and_unmapped_bams.sample_name
   }
 
-  sample_and_unmapped_bams.flowcell_unmapped_bams = BamToUnmappedBams.output_bam
+  Array[File] sample_and_unmapped_bams.flowcell_unmapped_bams = BamToUnmappedBams.output_bam
 
   call ToBam.UnmappedBamToAlignedBam {
     input:
