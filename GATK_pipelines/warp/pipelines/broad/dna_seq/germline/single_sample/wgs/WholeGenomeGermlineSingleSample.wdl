@@ -77,7 +77,7 @@ workflow WholeGenomeGermlineSingleSample {
   SampleAndUnmappedBams sample_and_unmapped_bams1 = {
     "base_file_name": sample_and_unmapped_bams.base_file_name,
     "final_gvcf_base_name": sample_and_unmapped_bams.final_gvcf_base_name,
-    "output_bam": BamToUnmappedBams.output_bam,
+    "flowcell_unmapped_bams": BamToUnmappedBams.output_bam,
     "sample_name": sample_and_unmapped_bams.sample_name,
     "unmapped_bam_suffix": sample_and_unmapped_bams.unmapped_bam_suffix
   }

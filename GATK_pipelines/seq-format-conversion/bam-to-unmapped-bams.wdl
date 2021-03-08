@@ -60,7 +60,7 @@ workflow BamToUnmappedBams {
   
 
   output {
-    File output_bam = SortSam.sorted_bam
+    Array[File] output_bam = SortSam.sorted_bam
   }
 }
 
