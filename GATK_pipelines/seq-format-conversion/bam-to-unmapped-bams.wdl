@@ -129,7 +129,7 @@ task SortSam {
     preemptible: preemptible_attempts
   }
   output {
-    File sorted_bam = "~{sorted_bam_name}"
+    Array[File] sorted_bam = glob("*.unmapped.bam")
   }
 }
 
