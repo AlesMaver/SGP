@@ -28,37 +28,39 @@ version 1.0
 workflow BamToUnmappedBams {
   input {
     File input_bam
+    String sample_name
 
     Int additional_disk_size = 20
     String gatk_docker = "broadinstitute/gatk:latest"
     String gatk_path = "/gatk/gatk"
   }
-    Float input_size = size(input_bam, "GB")
+  
+  Float input_size = size(input_bam, "GB")
     
   call RevertSam {
     input:
       input_bam = input_bam,
+      sample_name = sample_name,
       disk_size = ceil(input_size * 3) + additional_disk_size,
       docker = gatk_docker,
       gatk_path = gatk_path
   }
 
-  scatter (unmapped_bam in RevertSam.unmapped_bams) {
-    String output_basename = basename(unmapped_bam, ".coord.sorted.unmapped.bam")
-    Float unmapped_bam_size = size(unmapped_bam, "GB")
+  String output_basename = sample_name
+  Float unmapped_bam_size = size(RevertSam.unmapped_bam, "GB")
 
-    call SortSam {
+  call SortSam {
       input:
-        input_bam = unmapped_bam,
+        input_bam = RevertSam.unmapped_bam,
         sorted_bam_name = output_basename + ".unmapped.bam",
         disk_size = ceil(unmapped_bam_size * 6) + additional_disk_size,
         docker = gatk_docker,
         gatk_path = gatk_path
     }
-  }
+  
 
   output {
-    Array[File] output_bams = SortSam.sorted_bam
+    File output_bam = SortSam.sorted_bam
   }
 }
 
@@ -67,6 +69,7 @@ task RevertSam {
     #Command parameters
     File input_bam
     String gatk_path
+    String sample_name
 
     #Runtime parameters
     Int disk_size
@@ -77,12 +80,10 @@ task RevertSam {
     Int command_mem_gb = machine_mem_gb - 1    ####Needs to occur after machine_mem_gb is set 
 
   command { 
- 
     ~{gatk_path} --java-options "-Xmx~{command_mem_gb}g" \
     RevertSam \
     --INPUT ~{input_bam} \
-    --OUTPUT ./ \
-    --OUTPUT_BY_READGROUP true \
+    --OUTPUT ~{sample_name}.unmapped.bam \
     --VALIDATION_STRINGENCY LENIENT \
     --ATTRIBUTE_TO_CLEAR FT \
     --ATTRIBUTE_TO_CLEAR CO \
@@ -95,7 +96,7 @@ task RevertSam {
     preemptible: preemptible_attempts
   }
   output {
-    Array[File] unmapped_bams = glob("*.bam")
+    File unmapped_bam = "~{sample_name}.unmapped.bam"
   }
 }
 
