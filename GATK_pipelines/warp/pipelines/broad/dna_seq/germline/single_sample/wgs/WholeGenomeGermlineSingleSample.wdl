@@ -78,7 +78,7 @@ workflow WholeGenomeGermlineSingleSample {
 
   call ToBam.UnmappedBamToAlignedBam {
     input:
-      sample_and_unmapped_bams    = select_first([BamToUnmappedBams.output_bams, sample_and_unmapped_bams]),
+      sample_and_unmapped_bams    = BamToUnmappedBams.output_bams,
       references                  = references,
       papi_settings               = papi_settings,
 
