@@ -28,7 +28,6 @@ version 1.0
 ## page at https://hub.docker.com/r/broadinstitute/genomes-in-the-cloud/ for detailed
 ## licensing information pertaining to the included programs.
 
-import "../../../../../../../seq-format-conversion/bam-to-unmapped-bams.wdl" as BAM_to_uBAM
 import "../../../../../../tasks/broad/UnmappedBamToAlignedBam.wdl" as ToBam
 import "../../../../../../tasks/broad/AggregatedBamQC.wdl" as AggregatedQC
 import "../../../../../../tasks/broad/Qc.wdl" as QC
@@ -68,17 +67,9 @@ workflow WholeGenomeGermlineSingleSample {
   String final_gvcf_base_name = select_first([sample_and_unmapped_bams.final_gvcf_base_name, sample_and_unmapped_bams.base_file_name])
 
 
-  if ( defined(input_mapped_bam) ) {
-    call BAM_to_uBAM.BamToUnmappedBams {
-      input:
-        input_bam = input_mapped_bam
-    }
-  }
-
-
   call ToBam.UnmappedBamToAlignedBam {
     input:
-      sample_and_unmapped_bams    = BamToUnmappedBams.output_bams,
+      sample_and_unmapped_bams    = sample_and_unmapped_bams,
       references                  = references,
       papi_settings               = papi_settings,
 
