@@ -34,6 +34,7 @@ import "../../../../../../tasks/broad/Qc.wdl" as QC
 import "../../../../../../tasks/broad/BamToCram.wdl" as ToCram
 import "../../../../../../tasks/broad/VariantCalling.wdl" as ToGvcf
 import "../../../../../../structs/dna_seq/DNASeqStructs.wdl"
+import "../../../../../../../seq-format-conversion/bam-to-unmapped-bams.wdl" as BamToUbam
 
 
 # WORKFLOW DEFINITION
@@ -50,6 +51,8 @@ workflow WholeGenomeGermlineSingleSample {
     File? fingerprint_genotypes_file
     File? fingerprint_genotypes_index
 
+    File input_mapped_bam
+
     File wgs_coverage_interval_list
 
     Boolean provide_bam_output = false
@@ -64,6 +67,12 @@ workflow WholeGenomeGermlineSingleSample {
 
   String final_gvcf_base_name = select_first([sample_and_unmapped_bams.final_gvcf_base_name, sample_and_unmapped_bams.base_file_name])
 
+  # Generate uBAM from BAM
+  call BamToUbam.BamToUnmappedBams {
+    input:
+      input_bam = input_mapped_bam,
+      sample_name = sample_and_unmapped_bams.sample_name
+  }
 
   call ToBam.UnmappedBamToAlignedBam {
     input:
