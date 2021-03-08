@@ -47,8 +47,6 @@ workflow WholeGenomeGermlineSingleSample {
     VariantCallingScatterSettings scatter_settings
     PapiSettings papi_settings
 
-    File input_mapped_bam
-
     File? fingerprint_genotypes_file
     File? fingerprint_genotypes_index
 
