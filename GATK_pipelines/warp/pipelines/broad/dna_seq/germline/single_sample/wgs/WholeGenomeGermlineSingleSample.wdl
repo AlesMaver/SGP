@@ -34,6 +34,7 @@ import "../../../../../../tasks/broad/Qc.wdl" as QC
 import "../../../../../../tasks/broad/BamToCram.wdl" as ToCram
 import "../../../../../../tasks/broad/VariantCalling.wdl" as ToGvcf
 import "../../../../../../structs/dna_seq/DNASeqStructs.wdl"
+import "../../../../../../../seq-format-conversion/bam-to-unmapped-bams.wdl"
 
 # WORKFLOW DEFINITION
 workflow WholeGenomeGermlineSingleSample {
@@ -45,6 +46,8 @@ workflow WholeGenomeGermlineSingleSample {
     DNASeqSingleSampleReferences references
     VariantCallingScatterSettings scatter_settings
     PapiSettings papi_settings
+
+    File? input_mapped_bam
 
     File? fingerprint_genotypes_file
     File? fingerprint_genotypes_index
@@ -63,9 +66,18 @@ workflow WholeGenomeGermlineSingleSample {
 
   String final_gvcf_base_name = select_first([sample_and_unmapped_bams.final_gvcf_base_name, sample_and_unmapped_bams.base_file_name])
 
+
+  if ( defined(input_mapped_bam) ) {
+    call BamToUnmappedBams {
+      input:
+        input_bam = input_mapped_bam
+    }
+  }
+
+
   call ToBam.UnmappedBamToAlignedBam {
     input:
-      sample_and_unmapped_bams    = sample_and_unmapped_bams,
+      sample_and_unmapped_bams    = select_first([BamToUnmappedBams.output_bams, sample_and_unmapped_bams]),
       references                  = references,
       papi_settings               = papi_settings,
 
