@@ -74,11 +74,17 @@ workflow WholeGenomeGermlineSingleSample {
       sample_name = sample_and_unmapped_bams.sample_name
   }
 
-  sample_and_unmapped_bams["flowcell_unmapped_bams"] = BamToUnmappedBams.output_bam
+  struct sample_and_unmapped_bams1 {
+    String sample_and_unmapped_bams.base_file_name
+    String? sample_and_unmapped_bams.final_gvcf_base_name
+    Array[File] BamToUnmappedBams.output_bam
+    String sample_and_unmapped_bams.sample_name
+    String sample_and_unmapped_bams.unmapped_bam_suffix
+  }
 
   call ToBam.UnmappedBamToAlignedBam {
     input:
-      sample_and_unmapped_bams    = sample_and_unmapped_bams,
+      sample_and_unmapped_bams    = sample_and_unmapped_bams1,
       references                  = references,
       papi_settings               = papi_settings,
 
