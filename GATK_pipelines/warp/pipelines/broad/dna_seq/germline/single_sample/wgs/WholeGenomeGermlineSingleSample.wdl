@@ -88,12 +88,12 @@ workflow WholeGenomeGermlineSingleSample {
       sample_name = sample_and_unmapped_bams.sample_name
   }
 
-  SampleAndUnmappedBams sample_and_unmapped_bams1 = {
-      "sample_name": sample_and_unmapped_bams.sample_name,
-      "final_gvcf_base_name": sample_and_unmapped_bams.final_gvcf_base_name,
-      "flowcell_unmapped_bams": BamToUnmappedBams.output_bam,
-      "base_file_name": sample_and_unmapped_bams.base_file_name,
-      "unmapped_bam_suffix": sample_and_unmapped_bams.sample_name
+  SampleAndUnmappedBams sample_and_unmapped_bams1 = object {
+      sample_name: sample_and_unmapped_bams.sample_name,
+      final_gvcf_base_name: sample_and_unmapped_bams.final_gvcf_base_name,
+      flowcell_unmapped_bams: BamToUnmappedBams.output_bam,
+      base_file_name: sample_and_unmapped_bams.base_file_name,
+      unmapped_bam_suffix: sample_and_unmapped_bams.sample_name
   }
 
   call ToBam.UnmappedBamToAlignedBam {
