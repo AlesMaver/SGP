@@ -60,7 +60,7 @@ workflow WholeGenomeGermlineSingleSample {
   }
 
   # Not overridable:
-  Int read_length = 250
+  Int read_length = 100
   Float lod_threshold = -20.0
   String cross_check_fingerprints_by = "READGROUP"
   String recalibrated_bam_basename = sample_and_unmapped_bams.base_file_name + ".aligned.duplicates_marked.recalibrated"
