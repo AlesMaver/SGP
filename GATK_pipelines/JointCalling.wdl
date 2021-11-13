@@ -104,8 +104,8 @@ workflow JointGenotyping {
 
   Array[File] unpadded_intervals = SplitIntervalList.output_intervals
 
-  scatter (idx in range(50) ) { # For testing
-  # scatter (idx in range(length(unpadded_intervals))) {
+  # scatter (idx in range(50) ) { # For testing
+  scatter (idx in range(length(unpadded_intervals))) {
     # The batch_size value was carefully chosen here as it
     # is the optimal value for the amount of memory allocated
     # within the task; please do not change it without consulting
