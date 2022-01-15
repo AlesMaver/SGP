@@ -188,7 +188,7 @@ workflow UnmappedBamToAlignedBam {
   # If we take the number we are scattering by and reduce by 3 we will have enough disk space
   # to account for the fact that the data is not split evenly.
   Int num_of_bqsr_scatters = length(CreateSequenceGroupingTSV.sequence_grouping)
-  Int potential_bqsr_divisor = num_of_bqsr_scatters - 10
+  Int potential_bqsr_divisor = num_of_bqsr_scatters - 23
   Int bqsr_divisor = if potential_bqsr_divisor > 1 then potential_bqsr_divisor else 1
 
   # Perform Base Quality Score Recalibration (BQSR) on the sorted BAM in parallel
