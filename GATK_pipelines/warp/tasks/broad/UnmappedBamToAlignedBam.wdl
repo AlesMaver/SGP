@@ -145,20 +145,20 @@ workflow UnmappedBamToAlignedBam {
 
   Float agg_bam_size = size(SortSampleBam.output_bam, "GiB")
 
-  if (defined(haplotype_database_file)) {
-    # Check identity of fingerprints across readgroups
-    call QC.CrossCheckFingerprints as CrossCheckFingerprints {
-      input:
-        input_bams = [ SortSampleBam.output_bam ],
-        input_bam_indexes = [SortSampleBam.output_bam_index],
-        haplotype_database_file = haplotype_database_file,
-        metrics_filename = sample_and_unmapped_bams.base_file_name + ".crosscheck",
-        total_input_size = agg_bam_size,
-        lod_threshold = lod_threshold,
-        cross_check_by = cross_check_fingerprints_by,
-        preemptible_tries = papi_settings.agg_preemptible_tries
-    }
-  }
+  # if (defined(haplotype_database_file)) {
+  #   # Check identity of fingerprints across readgroups
+  #   call QC.CrossCheckFingerprints as CrossCheckFingerprints {
+  #     input:
+  #       input_bams = [ SortSampleBam.output_bam ],
+  #       input_bam_indexes = [SortSampleBam.output_bam_index],
+  #       haplotype_database_file = haplotype_database_file,
+  #       metrics_filename = sample_and_unmapped_bams.base_file_name + ".crosscheck",
+  #       total_input_size = agg_bam_size,
+  #       lod_threshold = lod_threshold,
+  #       cross_check_by = cross_check_fingerprints_by,
+  #       preemptible_tries = papi_settings.agg_preemptible_tries
+  #   }
+  # }
 
   # Create list of sequences for scatter-gather parallelization
   call Utils.CreateSequenceGroupingTSV as CreateSequenceGroupingTSV {
