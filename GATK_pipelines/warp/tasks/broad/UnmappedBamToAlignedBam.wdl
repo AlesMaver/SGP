@@ -145,20 +145,20 @@ workflow UnmappedBamToAlignedBam {
 
   Float agg_bam_size = size(SortSampleBam.output_bam, "GiB")
 
-  if (defined(haplotype_database_file)) {
-    # Check identity of fingerprints across readgroups
-    call QC.CrossCheckFingerprints as CrossCheckFingerprints {
-      input:
-        input_bams = [ SortSampleBam.output_bam ],
-        input_bam_indexes = [SortSampleBam.output_bam_index],
-        haplotype_database_file = haplotype_database_file,
-        metrics_filename = sample_and_unmapped_bams.base_file_name + ".crosscheck",
-        total_input_size = agg_bam_size,
-        lod_threshold = lod_threshold,
-        cross_check_by = cross_check_fingerprints_by,
-        preemptible_tries = papi_settings.agg_preemptible_tries
-    }
-  }
+  # if (defined(haplotype_database_file)) {
+  #   # Check identity of fingerprints across readgroups
+  #   call QC.CrossCheckFingerprints as CrossCheckFingerprints {
+  #     input:
+  #       input_bams = [ SortSampleBam.output_bam ],
+  #       input_bam_indexes = [SortSampleBam.output_bam_index],
+  #       haplotype_database_file = haplotype_database_file,
+  #       metrics_filename = sample_and_unmapped_bams.base_file_name + ".crosscheck",
+  #       total_input_size = agg_bam_size,
+  #       lod_threshold = lod_threshold,
+  #       cross_check_by = cross_check_fingerprints_by,
+  #       preemptible_tries = papi_settings.agg_preemptible_tries
+  #   }
+  # }
 
   # Create list of sequences for scatter-gather parallelization
   call Utils.CreateSequenceGroupingTSV as CreateSequenceGroupingTSV {
@@ -188,7 +188,7 @@ workflow UnmappedBamToAlignedBam {
   # If we take the number we are scattering by and reduce by 3 we will have enough disk space
   # to account for the fact that the data is not split evenly.
   Int num_of_bqsr_scatters = length(CreateSequenceGroupingTSV.sequence_grouping)
-  Int potential_bqsr_divisor = num_of_bqsr_scatters - 10
+  Int potential_bqsr_divisor = num_of_bqsr_scatters - 23
   Int bqsr_divisor = if potential_bqsr_divisor > 1 then potential_bqsr_divisor else 1
 
   # Perform Base Quality Score Recalibration (BQSR) on the sorted BAM in parallel
@@ -264,7 +264,7 @@ workflow UnmappedBamToAlignedBam {
     Array[File] unsorted_read_group_quality_distribution_pdf = CollectUnsortedReadgroupBamQualityMetrics.quality_distribution_pdf
     Array[File] unsorted_read_group_quality_distribution_metrics = CollectUnsortedReadgroupBamQualityMetrics.quality_distribution_metrics
 
-    File? cross_check_fingerprints_metrics = CrossCheckFingerprints.cross_check_fingerprints_metrics
+    # File? cross_check_fingerprints_metrics = CrossCheckFingerprints.cross_check_fingerprints_metrics
 
     # Temporarily disable if testing with a small BAM input used for testing
     #File selfSM = CheckContamination.selfSM
