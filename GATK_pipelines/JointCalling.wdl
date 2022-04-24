@@ -6,7 +6,7 @@ import "https://raw.githubusercontent.com/broadinstitute/warp/develop/tasks/broa
 # Joint Genotyping for hg38 Whole Genomes and Exomes (has not been tested on hg19)
 workflow JointGenotyping {
 
-  String pipeline_version = "1.5.2"
+  String pipeline_version = "1.6.1"
 
   input {
     File unpadded_intervals_file
@@ -104,7 +104,6 @@ workflow JointGenotyping {
 
   Array[File] unpadded_intervals = SplitIntervalList.output_intervals
 
-  # scatter (idx in range(50) ) { # For testing
   scatter (idx in range(length(unpadded_intervals))) {
     # The batch_size value was carefully chosen here as it
     # is the optimal value for the amount of memory allocated
@@ -184,7 +183,7 @@ workflow JointGenotyping {
     }
 
     if (!use_gnarly_genotyper) {
-      call GenotypeGVCFs {
+      call Tasks.GenotypeGVCFs {
         input:
           workspace_tar = genomicsdb_tar,
           interval = unpadded_intervals[idx],
@@ -218,7 +217,7 @@ workflow JointGenotyping {
       disk_size = medium_disk
   }
 
-  call IndelsVariantRecalibrator {
+  call Tasks.IndelsVariantRecalibrator {
     input:
       sites_only_variant_filtered_vcf = SitesOnlyGatherVcf.output_vcf,
       sites_only_variant_filtered_vcf_index = SitesOnlyGatherVcf.output_vcf_index,
@@ -237,7 +236,7 @@ workflow JointGenotyping {
   }
 
   if (num_gvcfs > snps_variant_recalibration_threshold) {
-    call SNPsVariantRecalibratorCreateModel {
+    call Tasks.SNPsVariantRecalibratorCreateModel {
       input:
         sites_only_variant_filtered_vcf = SitesOnlyGatherVcf.output_vcf,
         sites_only_variant_filtered_vcf_index = SitesOnlyGatherVcf.output_vcf_index,
@@ -260,7 +259,7 @@ workflow JointGenotyping {
     }
 
     scatter (idx in range(length(HardFilterAndMakeSitesOnlyVcf.sites_only_vcf))) {
-      call SNPsVariantRecalibrator as SNPsVariantRecalibratorScattered {
+      call Tasks.SNPsVariantRecalibrator as SNPsVariantRecalibratorScattered {
         input:
           sites_only_variant_filtered_vcf = HardFilterAndMakeSitesOnlyVcf.sites_only_vcf[idx],
           sites_only_variant_filtered_vcf_index = HardFilterAndMakeSitesOnlyVcf.sites_only_vcf_index[idx],
@@ -292,7 +291,7 @@ workflow JointGenotyping {
   }
 
   if (num_gvcfs <= snps_variant_recalibration_threshold) {
-    call SNPsVariantRecalibrator as SNPsVariantRecalibratorClassic {
+    call Tasks.SNPsVariantRecalibrator as SNPsVariantRecalibratorClassic {
       input:
         sites_only_variant_filtered_vcf = SitesOnlyGatherVcf.output_vcf,
         sites_only_variant_filtered_vcf_index = SitesOnlyGatherVcf.output_vcf_index,
@@ -506,7 +505,7 @@ task ImportGVCFs_import {
     Int disk_size
     Int batch_size
 
-    String gatk_docker = "us.gcr.io/broad-gatk/gatk:4.1.8.0"
+    String gatk_docker = "us.gcr.io/broad-gatk/gatk:4.2.6.1"
   }
 
   String idx = select_first([index, ""])
@@ -525,7 +524,7 @@ task ImportGVCFs_import {
     # a significant amount of non-heap memory for native libraries.
     # Also, testing has shown that the multithreaded reader initialization
     # does not scale well beyond 5 threads, so don't increase beyond that.
-    gatk --java-options -Xms8g \
+    gatk --java-options "-Xms8000m -Xmx25000m" \
       GenomicsDBImport \
       --genomicsdb-workspace-path ~{workspace_dir_name} \
       --batch-size ~{batch_size} \
@@ -539,7 +538,7 @@ task ImportGVCFs_import {
   >>>
 
   runtime {
-    memory: "26 GiB"
+    memory: "26000 MiB"
     cpu: 4
     bootDiskSizeGb: 15
     disks: "local-disk " + disk_size + " HDD"
@@ -570,7 +569,7 @@ task ImportGVCFs_update {
     Int disk_size
     Int batch_size
 
-    String gatk_docker = "us.gcr.io/broad-gatk/gatk:4.1.8.0"
+    String gatk_docker = "us.gcr.io/broad-gatk/gatk:4.2.6.1"
   }
 
   String idx = select_first([index, ""])
@@ -590,7 +589,7 @@ task ImportGVCFs_update {
     # a significant amount of non-heap memory for native libraries.
     # Also, testing has shown that the multithreaded reader initialization
     # does not scale well beyond 5 threads, so don't increase beyond that.
-    gatk --java-options -Xms8g \
+    gatk --java-options "-Xms8000m -Xmx25000m" \
       GenomicsDBImport \
       --genomicsdb-update-workspace-path $WORKSPACE \
       --batch-size ~{batch_size} \
@@ -603,8 +602,7 @@ task ImportGVCFs_update {
   >>>
 
   runtime {
-    memory: "26 GiB"
-    requested_memory_mb_per_core: 14000
+    memory: "26000 MiB"
     cpu: 4
     bootDiskSizeGb: 15
     disks: "local-disk " + disk_size + " HDD"
@@ -616,276 +614,3 @@ task ImportGVCFs_update {
     File output_genomicsdb = "~{workspace_dir_name}.tar"
   }
 }
-
-
-task IndelsVariantRecalibrator {
-
-  input {
-    String recalibration_filename
-    String tranches_filename
-
-    Array[String] recalibration_tranche_values
-    Array[String] recalibration_annotation_values
-
-    File sites_only_variant_filtered_vcf
-    File sites_only_variant_filtered_vcf_index
-
-    File mills_resource_vcf
-    File axiomPoly_resource_vcf
-    File dbsnp_resource_vcf
-    File mills_resource_vcf_index
-    File axiomPoly_resource_vcf_index
-    File dbsnp_resource_vcf_index
-    Boolean use_allele_specific_annotations
-    Int max_gaussians = 4
-
-    Int disk_size
-    String gatk_docker = "us.gcr.io/broad-gatk/gatk:4.1.8.0"
-  }
-
-  command <<<
-    set -euo pipefail
-
-    gatk --java-options -Xms24g \
-      VariantRecalibrator \
-      -V ~{sites_only_variant_filtered_vcf} \
-      -O ~{recalibration_filename} \
-      --tranches-file ~{tranches_filename} \
-      --trust-all-polymorphic \
-      -tranche ~{sep=' -tranche ' recalibration_tranche_values} \
-      -an ~{sep=' -an ' recalibration_annotation_values} \
-      ~{true='--use-allele-specific-annotations' false='' use_allele_specific_annotations} \
-      -mode INDEL \
-      --max-gaussians ~{max_gaussians} \
-      -resource:mills,known=false,training=true,truth=true,prior=12 ~{mills_resource_vcf} \
-      -resource:axiomPoly,known=false,training=true,truth=false,prior=10 ~{axiomPoly_resource_vcf} \
-      -resource:dbsnp,known=true,training=false,truth=false,prior=2 ~{dbsnp_resource_vcf}
-  >>>
-
-  runtime {
-    memory: "26 GiB"
-    cpu: "2"
-    requested_memory_mb_per_core: 14000
-    bootDiskSizeGb: 15
-    disks: "local-disk " + disk_size + " HDD"
-    preemptible: 1
-    docker: gatk_docker
-  }
-
-  output {
-    File recalibration = "~{recalibration_filename}"
-    File recalibration_index = "~{recalibration_filename}.idx"
-    File tranches = "~{tranches_filename}"
-  }
-}
-
-
-task SNPsVariantRecalibratorCreateModel {
-
-  input {
-    String recalibration_filename
-    String tranches_filename
-    Int downsampleFactor
-    String model_report_filename
-
-    Array[String] recalibration_tranche_values
-    Array[String] recalibration_annotation_values
-
-    File sites_only_variant_filtered_vcf
-    File sites_only_variant_filtered_vcf_index
-
-    File hapmap_resource_vcf
-    File omni_resource_vcf
-    File one_thousand_genomes_resource_vcf
-    File dbsnp_resource_vcf
-    File hapmap_resource_vcf_index
-    File omni_resource_vcf_index
-    File one_thousand_genomes_resource_vcf_index
-    File dbsnp_resource_vcf_index
-    Boolean use_allele_specific_annotations
-    Int max_gaussians = 6
-
-    Int disk_size
-    String gatk_docker = "us.gcr.io/broad-gatk/gatk:4.1.8.0"
-  }
-
-  command <<<
-    set -euo pipefail
-
-    gatk --java-options -Xms30g \
-      VariantRecalibrator \
-      -V ~{sites_only_variant_filtered_vcf} \
-      -O ~{recalibration_filename} \
-      --tranches-file ~{tranches_filename} \
-      --trust-all-polymorphic \
-      -tranche ~{sep=' -tranche ' recalibration_tranche_values} \
-      -an ~{sep=' -an ' recalibration_annotation_values} \
-      ~{true='--use-allele-specific-annotations' false='' use_allele_specific_annotations} \
-      -mode SNP \
-      --sample-every-Nth-variant ~{downsampleFactor} \
-      --output-model ~{model_report_filename} \
-      --max-gaussians ~{max_gaussians} \
-      -resource:hapmap,known=false,training=true,truth=true,prior=15 ~{hapmap_resource_vcf} \
-      -resource:omni,known=false,training=true,truth=true,prior=12 ~{omni_resource_vcf} \
-      -resource:1000G,known=false,training=true,truth=false,prior=10 ~{one_thousand_genomes_resource_vcf} \
-      -resource:dbsnp,known=true,training=false,truth=false,prior=7 ~{dbsnp_resource_vcf}
-  >>>
-
-  runtime {
-    memory: "104 GiB"
-    cpu: "2"
-    requested_memory_mb_per_core: 16000
-    bootDiskSizeGb: 15
-    disks: "local-disk " + disk_size + " HDD"
-    preemptible: 1
-    docker: gatk_docker
-  }
-
-  output {
-    File model_report = "~{model_report_filename}"
-  }
-}
-
-task SNPsVariantRecalibrator {
-
-  input {
-    String recalibration_filename
-    String tranches_filename
-    File? model_report
-
-    Array[String] recalibration_tranche_values
-    Array[String] recalibration_annotation_values
-
-    File sites_only_variant_filtered_vcf
-    File sites_only_variant_filtered_vcf_index
-
-    File hapmap_resource_vcf
-    File omni_resource_vcf
-    File one_thousand_genomes_resource_vcf
-    File dbsnp_resource_vcf
-    File hapmap_resource_vcf_index
-    File omni_resource_vcf_index
-    File one_thousand_genomes_resource_vcf_index
-    File dbsnp_resource_vcf_index
-    Boolean use_allele_specific_annotations
-    Int max_gaussians = 6
-
-    Int disk_size
-    String gatk_docker = "us.gcr.io/broad-gatk/gatk:4.1.8.0"
-    Int? machine_mem_gb
-
-  }
-
-  Int auto_mem = ceil(2 * size([sites_only_variant_filtered_vcf,
-                              hapmap_resource_vcf,
-                              omni_resource_vcf,
-                              one_thousand_genomes_resource_vcf,
-                              dbsnp_resource_vcf],
-                      "GiB"))
-  Int machine_mem = select_first([machine_mem_gb, if auto_mem < 7 then 7 else auto_mem])
-  Int java_mem = machine_mem - 1
-
-
-  String model_report_arg = if defined(model_report) then "--input-model $MODEL_REPORT --output-tranches-for-scatter" else ""
-
-  command <<<
-    set -euo pipefail
-
-    MODEL_REPORT=~{model_report}
-
-    gatk --java-options -Xms~{java_mem}g \
-      VariantRecalibrator \
-      -V ~{sites_only_variant_filtered_vcf} \
-      -O ~{recalibration_filename} \
-      --tranches-file ~{tranches_filename} \
-      --trust-all-polymorphic \
-      -tranche ~{sep=' -tranche ' recalibration_tranche_values} \
-      -an ~{sep=' -an ' recalibration_annotation_values} \
-      ~{true='--use-allele-specific-annotations' false='' use_allele_specific_annotations} \
-      -mode SNP \
-      ~{model_report_arg} \
-      --max-gaussians ~{max_gaussians} \
-      -resource:hapmap,known=false,training=true,truth=true,prior=15 ~{hapmap_resource_vcf} \
-      -resource:omni,known=false,training=true,truth=true,prior=12 ~{omni_resource_vcf} \
-      -resource:1000G,known=false,training=true,truth=false,prior=10 ~{one_thousand_genomes_resource_vcf} \
-      -resource:dbsnp,known=true,training=false,truth=false,prior=7 ~{dbsnp_resource_vcf}
-  >>>
-
-  runtime {
-    memory: "~{machine_mem} GiB"
-    cpu: 2
-    requested_memory_mb_per_core: 16000
-    bootDiskSizeGb: 15
-    disks: "local-disk " + disk_size + " HDD"
-    preemptible: 1
-    docker: gatk_docker
-  }
-
-  output {
-    File recalibration = "~{recalibration_filename}"
-    File recalibration_index = "~{recalibration_filename}.idx"
-    File tranches = "~{tranches_filename}"
-  }
-}
-
-task GenotypeGVCFs {
-
-  input {
-    File workspace_tar
-    File interval
-
-    String output_vcf_filename
-
-    File ref_fasta
-    File ref_fasta_index
-    File ref_dict
-
-    String dbsnp_vcf
-
-    Int disk_size
-    # This is needed for gVCFs generated with GATK3 HaplotypeCaller
-    Boolean allow_old_rms_mapping_quality_annotation_data = false
-    String gatk_docker = "us.gcr.io/broad-gatk/gatk:4.2.3.0"
-  }
-
-  parameter_meta {
-    interval: {
-      localization_optional: true
-    }
-  }
-
-  command <<<
-    set -euo pipefail
-
-    tar -xf ~{workspace_tar}
-    WORKSPACE=$(basename ~{workspace_tar} .tar)
-
-    gatk --java-options "-Xms8000m -Xmx12000m" \
-      GenotypeGVCFs \
-      -R ~{ref_fasta} \
-      -O ~{output_vcf_filename} \
-      -D ~{dbsnp_vcf} \
-      -G StandardAnnotation -G AS_StandardAnnotation \
-      --only-output-calls-starting-in-intervals \
-      -V gendb://$WORKSPACE \
-      -L ~{interval} \
-      ~{true='--allow-old-rms-mapping-quality-annotation-data' false='' allow_old_rms_mapping_quality_annotation_data} \
-      --merge-input-intervals
-  >>>
-
-  runtime {
-    memory: "26000 MiB"
-    cpu: 2
-    requested_memory_mb_per_core: 7000
-    bootDiskSizeGb: 15
-    disks: "local-disk " + disk_size + " HDD"
-    preemptible: 1
-    docker: gatk_docker
-  }
-
-  output {
-    File output_vcf = "~{output_vcf_filename}"
-    File output_vcf_index = "~{output_vcf_filename}.tbi"
-  }
-}
-
