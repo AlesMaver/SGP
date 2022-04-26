@@ -63,8 +63,11 @@ workflow JointGenotyping {
     Int gnarly_scatter_count = 10
     Boolean use_gnarly_genotyper = false
     Boolean use_allele_specific_annotations = true
-    Boolean cross_check_fingerprints = true
+    Boolean cross_check_fingerprints = false
     Boolean scatter_cross_check_fingerprints = false
+
+    Boolean performImportGVCFs = true
+    Boolean performGenotyping = true
   }
 
   Boolean allele_specific_annotations = !use_gnarly_genotyper && use_allele_specific_annotations
@@ -109,165 +112,148 @@ workflow JointGenotyping {
     # is the optimal value for the amount of memory allocated
     # within the task; please do not change it without consulting
     # the Hellbender (GATK engine) team!
-    if ( !defined(genomicsdb_tars) ) {
-        call ImportGVCFs_import as ImportGVCFs {
-          input:
-            sample_name_map = sample_name_map,
-            interval = unpadded_intervals[idx],
-            ref_fasta = ref_fasta,
-            ref_fasta_index = ref_fasta_index,
-            ref_dict = ref_dict,
-            workspace_dir_name = "genomicsdb" + "_" + idx,
-            index = idx,
-            disk_size = medium_disk,
-            batch_size = 50
-        }
-    }
-
-    if ( defined(genomicsdb_tars) ) {
-        Array[File] genomicsdb_tars_provided = select_first([genomicsdb_tars])
-
-        call ImportGVCFs_update {
-          input:
-            sample_name_map = sample_name_map,
-            interval = unpadded_intervals[idx],
-            workspace_tar = genomicsdb_tars_provided[idx],
-            ref_fasta = ref_fasta,
-            ref_fasta_index = ref_fasta_index,
-            ref_dict = ref_dict,
-            workspace_dir_name = "genomicsdb" + "_" + idx,
-            index = idx,
-            disk_size = medium_disk,
-            batch_size = 50
-        }
-    }
-
-    File genomicsdb_tar = select_first([ImportGVCFs.output_genomicsdb, ImportGVCFs_update.output_genomicsdb])
-
-    if (use_gnarly_genotyper) {
-
-      call Tasks.SplitIntervalList as GnarlyIntervalScatterDude {
-        input:
-          interval_list = unpadded_intervals[idx],
-          scatter_count = gnarly_scatter_count,
-          ref_fasta = ref_fasta,
-          ref_fasta_index = ref_fasta_index,
-          ref_dict = ref_dict,
-          disk_size = small_disk,
-          sample_names_unique_done = CheckSamplesUnique.samples_unique
+    if (performImportGVCFs) {
+      if ( !defined(genomicsdb_tars) ) {
+          call ImportGVCFs_import as ImportGVCFs {
+            input:
+              sample_name_map = sample_name_map,
+              interval = unpadded_intervals[idx],
+              ref_fasta = ref_fasta,
+              ref_fasta_index = ref_fasta_index,
+              ref_dict = ref_dict,
+              workspace_dir_name = "genomicsdb" + "_" + idx,
+              index = idx,
+              disk_size = medium_disk,
+              batch_size = 50
+          }
       }
 
-      Array[File] gnarly_intervals = GnarlyIntervalScatterDude.output_intervals
+      if ( defined(genomicsdb_tars) ) {
+          Array[File] genomicsdb_tars_provided = select_first([genomicsdb_tars])
 
-      scatter (gnarly_idx in range(length(gnarly_intervals))) {
-        call Tasks.GnarlyGenotyper {
+          call ImportGVCFs_update {
+            input:
+              sample_name_map = sample_name_map,
+              interval = unpadded_intervals[idx],
+              workspace_tar = genomicsdb_tars_provided[idx],
+              ref_fasta = ref_fasta,
+              ref_fasta_index = ref_fasta_index,
+              ref_dict = ref_dict,
+              workspace_dir_name = "genomicsdb" + "_" + idx,
+              index = idx,
+              disk_size = medium_disk,
+              batch_size = 50
+          }
+      }
+    }
+
+    File genomicsdb_tar = select_first([ImportGVCFs.output_genomicsdb, ImportGVCFs_update.output_genomicsdb, "genomicsdb" + "_" + idx + ".tar"])
+
+    if (performGenotyping) {
+      if (use_gnarly_genotyper) {
+
+        call Tasks.SplitIntervalList as GnarlyIntervalScatterDude {
+          input:
+            interval_list = unpadded_intervals[idx],
+            scatter_count = gnarly_scatter_count,
+            ref_fasta = ref_fasta,
+            ref_fasta_index = ref_fasta_index,
+            ref_dict = ref_dict,
+            disk_size = small_disk,
+            sample_names_unique_done = CheckSamplesUnique.samples_unique
+        }
+
+        Array[File] gnarly_intervals = GnarlyIntervalScatterDude.output_intervals
+
+        scatter (gnarly_idx in range(length(gnarly_intervals))) {
+          call Tasks.GnarlyGenotyper {
+            input:
+              workspace_tar = genomicsdb_tar,
+              interval = gnarly_intervals[gnarly_idx],
+              output_vcf_filename = callset_name + "." + idx + "." + gnarly_idx + ".vcf.gz",
+              ref_fasta = ref_fasta,
+              ref_fasta_index = ref_fasta_index,
+              ref_dict = ref_dict,
+              dbsnp_vcf = dbsnp_vcf,
+          }
+        }
+
+        Array[File] gnarly_gvcfs = GnarlyGenotyper.output_vcf
+
+        call GatherVcfs as TotallyRadicalGatherVcfs {
+          input:
+            input_vcfs = gnarly_gvcfs,
+            output_vcf_name = callset_name + "." + idx + ".gnarly.vcf.gz",
+            disk_size = large_disk
+        }
+      }
+
+      if (!use_gnarly_genotyper) {
+        call GenotypeGVCFs {
           input:
             workspace_tar = genomicsdb_tar,
-            interval = gnarly_intervals[gnarly_idx],
-            output_vcf_filename = callset_name + "." + idx + "." + gnarly_idx + ".vcf.gz",
+            interval = unpadded_intervals[idx],
+            output_vcf_filename = callset_name + "." + idx + ".vcf.gz",
             ref_fasta = ref_fasta,
             ref_fasta_index = ref_fasta_index,
             ref_dict = ref_dict,
             dbsnp_vcf = dbsnp_vcf,
+            disk_size = medium_disk
         }
       }
 
-      Array[File] gnarly_gvcfs = GnarlyGenotyper.output_vcf
+      File genotyped_vcf = select_first([TotallyRadicalGatherVcfs.output_vcf, GenotypeGVCFs.output_vcf])
+      File genotyped_vcf_index = select_first([TotallyRadicalGatherVcfs.output_vcf_index, GenotypeGVCFs.output_vcf_index])
 
-      call Tasks.GatherVcfs as TotallyRadicalGatherVcfs {
+      call Tasks.HardFilterAndMakeSitesOnlyVcf {
         input:
-          input_vcfs = gnarly_gvcfs,
-          output_vcf_name = callset_name + "." + idx + ".gnarly.vcf.gz",
-          disk_size = large_disk
-      }
-    }
-
-    if (!use_gnarly_genotyper) {
-      call GenotypeGVCFs {
-        input:
-          workspace_tar = genomicsdb_tar,
-          interval = unpadded_intervals[idx],
-          output_vcf_filename = callset_name + "." + idx + ".vcf.gz",
-          ref_fasta = ref_fasta,
-          ref_fasta_index = ref_fasta_index,
-          ref_dict = ref_dict,
-          dbsnp_vcf = dbsnp_vcf,
+          vcf = genotyped_vcf,
+          vcf_index = genotyped_vcf_index,
+          excess_het_threshold = excess_het_threshold,
+          variant_filtered_vcf_filename = callset_name + "." + idx + ".variant_filtered.vcf.gz",
+          sites_only_vcf_filename = callset_name + "." + idx + ".sites_only.variant_filtered.vcf.gz",
           disk_size = medium_disk
       }
     }
+  }
 
-    File genotyped_vcf = select_first([TotallyRadicalGatherVcfs.output_vcf, GenotypeGVCFs.output_vcf])
-    File genotyped_vcf_index = select_first([TotallyRadicalGatherVcfs.output_vcf_index, GenotypeGVCFs.output_vcf_index])
-
-    call Tasks.HardFilterAndMakeSitesOnlyVcf {
+  if (performGenotyping) {
+    call GatherVcfs as SitesOnlyGatherVcf {
       input:
-        vcf = genotyped_vcf,
-        vcf_index = genotyped_vcf_index,
-        excess_het_threshold = excess_het_threshold,
-        variant_filtered_vcf_filename = callset_name + "." + idx + ".variant_filtered.vcf.gz",
-        sites_only_vcf_filename = callset_name + "." + idx + ".sites_only.variant_filtered.vcf.gz",
+        input_vcfs = HardFilterAndMakeSitesOnlyVcf.sites_only_vcf,
+        output_vcf_name = callset_name + ".sites_only.vcf.gz",
         disk_size = medium_disk
     }
-  }
 
-  call Tasks.GatherVcfs as SitesOnlyGatherVcf {
-    input:
-      input_vcfs = HardFilterAndMakeSitesOnlyVcf.sites_only_vcf,
-      output_vcf_name = callset_name + ".sites_only.vcf.gz",
-      disk_size = medium_disk
-  }
-
-  call Tasks.IndelsVariantRecalibrator {
-    input:
-      sites_only_variant_filtered_vcf = SitesOnlyGatherVcf.output_vcf,
-      sites_only_variant_filtered_vcf_index = SitesOnlyGatherVcf.output_vcf_index,
-      recalibration_filename = callset_name + ".indels.recal",
-      tranches_filename = callset_name + ".indels.tranches",
-      recalibration_tranche_values = indel_recalibration_tranche_values,
-      recalibration_annotation_values = indel_recalibration_annotation_values,
-      mills_resource_vcf = mills_resource_vcf,
-      mills_resource_vcf_index = mills_resource_vcf_index,
-      axiomPoly_resource_vcf = axiomPoly_resource_vcf,
-      axiomPoly_resource_vcf_index = axiomPoly_resource_vcf_index,
-      dbsnp_resource_vcf = dbsnp_resource_vcf,
-      dbsnp_resource_vcf_index = dbsnp_resource_vcf_index,
-      use_allele_specific_annotations = allele_specific_annotations,
-      disk_size = small_disk
-  }
-
-  if (num_gvcfs > snps_variant_recalibration_threshold) {
-    call Tasks.SNPsVariantRecalibratorCreateModel {
+    call Tasks.IndelsVariantRecalibrator {
       input:
         sites_only_variant_filtered_vcf = SitesOnlyGatherVcf.output_vcf,
         sites_only_variant_filtered_vcf_index = SitesOnlyGatherVcf.output_vcf_index,
-        recalibration_filename = callset_name + ".snps.recal",
-        tranches_filename = callset_name + ".snps.tranches",
-        recalibration_tranche_values = snp_recalibration_tranche_values,
-        recalibration_annotation_values = snp_recalibration_annotation_values,
-        downsampleFactor = SNP_VQSR_downsampleFactor,
-        model_report_filename = callset_name + ".snps.model.report",
-        hapmap_resource_vcf = hapmap_resource_vcf,
-        hapmap_resource_vcf_index = hapmap_resource_vcf_index,
-        omni_resource_vcf = omni_resource_vcf,
-        omni_resource_vcf_index = omni_resource_vcf_index,
-        one_thousand_genomes_resource_vcf = one_thousand_genomes_resource_vcf,
-        one_thousand_genomes_resource_vcf_index = one_thousand_genomes_resource_vcf_index,
+        recalibration_filename = callset_name + ".indels.recal",
+        tranches_filename = callset_name + ".indels.tranches",
+        recalibration_tranche_values = indel_recalibration_tranche_values,
+        recalibration_annotation_values = indel_recalibration_annotation_values,
+        mills_resource_vcf = mills_resource_vcf,
+        mills_resource_vcf_index = mills_resource_vcf_index,
+        axiomPoly_resource_vcf = axiomPoly_resource_vcf,
+        axiomPoly_resource_vcf_index = axiomPoly_resource_vcf_index,
         dbsnp_resource_vcf = dbsnp_resource_vcf,
         dbsnp_resource_vcf_index = dbsnp_resource_vcf_index,
         use_allele_specific_annotations = allele_specific_annotations,
         disk_size = small_disk
     }
 
-    scatter (idx in range(length(HardFilterAndMakeSitesOnlyVcf.sites_only_vcf))) {
-      call Tasks.SNPsVariantRecalibrator as SNPsVariantRecalibratorScattered {
+    if (num_gvcfs > snps_variant_recalibration_threshold) {
+      call Tasks.SNPsVariantRecalibratorCreateModel {
         input:
-          sites_only_variant_filtered_vcf = HardFilterAndMakeSitesOnlyVcf.sites_only_vcf[idx],
-          sites_only_variant_filtered_vcf_index = HardFilterAndMakeSitesOnlyVcf.sites_only_vcf_index[idx],
-          recalibration_filename = callset_name + ".snps." + idx + ".recal",
-          tranches_filename = callset_name + ".snps." + idx + ".tranches",
+          sites_only_variant_filtered_vcf = SitesOnlyGatherVcf.output_vcf,
+          sites_only_variant_filtered_vcf_index = SitesOnlyGatherVcf.output_vcf_index,
+          recalibration_filename = callset_name + ".snps.recal",
+          tranches_filename = callset_name + ".snps.tranches",
           recalibration_tranche_values = snp_recalibration_tranche_values,
           recalibration_annotation_values = snp_recalibration_annotation_values,
-          model_report = SNPsVariantRecalibratorCreateModel.model_report,
+          downsampleFactor = SNP_VQSR_downsampleFactor,
+          model_report_filename = callset_name + ".snps.model.report",
           hapmap_resource_vcf = hapmap_resource_vcf,
           hapmap_resource_vcf_index = hapmap_resource_vcf_index,
           omni_resource_vcf = omni_resource_vcf,
@@ -278,196 +264,219 @@ workflow JointGenotyping {
           dbsnp_resource_vcf_index = dbsnp_resource_vcf_index,
           use_allele_specific_annotations = allele_specific_annotations,
           disk_size = small_disk
-        }
-    }
+      }
 
-    call Tasks.GatherTranches as SNPGatherTranches {
-      input:
-        tranches = SNPsVariantRecalibratorScattered.tranches,
-        output_filename = callset_name + ".snps.gathered.tranches",
-        mode = "SNP",
-        disk_size = small_disk
-    }
-  }
+      scatter (idx in range(length(HardFilterAndMakeSitesOnlyVcf.sites_only_vcf))) {
+        call SNPsVariantRecalibrator as SNPsVariantRecalibratorScattered {
+          input:
+            sites_only_variant_filtered_vcf = HardFilterAndMakeSitesOnlyVcf.sites_only_vcf[idx],
+            sites_only_variant_filtered_vcf_index = HardFilterAndMakeSitesOnlyVcf.sites_only_vcf_index[idx],
+            recalibration_filename = callset_name + ".snps." + idx + ".recal",
+            tranches_filename = callset_name + ".snps." + idx + ".tranches",
+            recalibration_tranche_values = snp_recalibration_tranche_values,
+            recalibration_annotation_values = snp_recalibration_annotation_values,
+            model_report = SNPsVariantRecalibratorCreateModel.model_report,
+            hapmap_resource_vcf = hapmap_resource_vcf,
+            hapmap_resource_vcf_index = hapmap_resource_vcf_index,
+            omni_resource_vcf = omni_resource_vcf,
+            omni_resource_vcf_index = omni_resource_vcf_index,
+            one_thousand_genomes_resource_vcf = one_thousand_genomes_resource_vcf,
+            one_thousand_genomes_resource_vcf_index = one_thousand_genomes_resource_vcf_index,
+            dbsnp_resource_vcf = dbsnp_resource_vcf,
+            dbsnp_resource_vcf_index = dbsnp_resource_vcf_index,
+            use_allele_specific_annotations = allele_specific_annotations,
+            disk_size = small_disk
+          }
+      }
 
-  if (num_gvcfs <= snps_variant_recalibration_threshold) {
-    call Tasks.SNPsVariantRecalibrator as SNPsVariantRecalibratorClassic {
-      input:
-        sites_only_variant_filtered_vcf = SitesOnlyGatherVcf.output_vcf,
-        sites_only_variant_filtered_vcf_index = SitesOnlyGatherVcf.output_vcf_index,
-        recalibration_filename = callset_name + ".snps.recal",
-        tranches_filename = callset_name + ".snps.tranches",
-        recalibration_tranche_values = snp_recalibration_tranche_values,
-        recalibration_annotation_values = snp_recalibration_annotation_values,
-        hapmap_resource_vcf = hapmap_resource_vcf,
-        hapmap_resource_vcf_index = hapmap_resource_vcf_index,
-        omni_resource_vcf = omni_resource_vcf,
-        omni_resource_vcf_index = omni_resource_vcf_index,
-        one_thousand_genomes_resource_vcf = one_thousand_genomes_resource_vcf,
-        one_thousand_genomes_resource_vcf_index = one_thousand_genomes_resource_vcf_index,
-        dbsnp_resource_vcf = dbsnp_resource_vcf,
-        dbsnp_resource_vcf_index = dbsnp_resource_vcf_index,
-        use_allele_specific_annotations = allele_specific_annotations,
-        disk_size = small_disk
-    }
-  }
-
-  scatter (idx in range(length(HardFilterAndMakeSitesOnlyVcf.variant_filtered_vcf))) {
-    #for really large callsets we give to friends, just apply filters to the sites-only
-    call Tasks.ApplyRecalibration {
-      input:
-        recalibrated_vcf_filename = callset_name + ".filtered." + idx + ".vcf.gz",
-        input_vcf = HardFilterAndMakeSitesOnlyVcf.variant_filtered_vcf[idx],
-        input_vcf_index = HardFilterAndMakeSitesOnlyVcf.variant_filtered_vcf_index[idx],
-        indels_recalibration = IndelsVariantRecalibrator.recalibration,
-        indels_recalibration_index = IndelsVariantRecalibrator.recalibration_index,
-        indels_tranches = IndelsVariantRecalibrator.tranches,
-        snps_recalibration = if defined(SNPsVariantRecalibratorScattered.recalibration) then select_first([SNPsVariantRecalibratorScattered.recalibration])[idx] else select_first([SNPsVariantRecalibratorClassic.recalibration]),
-        snps_recalibration_index = if defined(SNPsVariantRecalibratorScattered.recalibration_index) then select_first([SNPsVariantRecalibratorScattered.recalibration_index])[idx] else select_first([SNPsVariantRecalibratorClassic.recalibration_index]),
-        snps_tranches = select_first([SNPGatherTranches.tranches_file, SNPsVariantRecalibratorClassic.tranches]),
-        indel_filter_level = indel_filter_level,
-        snp_filter_level = snp_filter_level,
-        use_allele_specific_annotations = allele_specific_annotations,
-        disk_size = medium_disk
-    }
-
-    # For large callsets we need to collect metrics from the shards and gather them later.
-    if (!is_small_callset) {
-      call Tasks.CollectVariantCallingMetrics as CollectMetricsSharded {
+      call Tasks.GatherTranches as SNPGatherTranches {
         input:
-          input_vcf = ApplyRecalibration.recalibrated_vcf,
-          input_vcf_index = ApplyRecalibration.recalibrated_vcf_index,
-          metrics_filename_prefix = callset_name + "." + idx,
+          tranches = SNPsVariantRecalibratorScattered.tranches,
+          output_filename = callset_name + ".snps.gathered.tranches",
+          mode = "SNP",
+          disk_size = small_disk
+      }
+    }
+
+    if (num_gvcfs <= snps_variant_recalibration_threshold) {
+      call Tasks.SNPsVariantRecalibrator as SNPsVariantRecalibratorClassic {
+        input:
+          sites_only_variant_filtered_vcf = SitesOnlyGatherVcf.output_vcf,
+          sites_only_variant_filtered_vcf_index = SitesOnlyGatherVcf.output_vcf_index,
+          recalibration_filename = callset_name + ".snps.recal",
+          tranches_filename = callset_name + ".snps.tranches",
+          recalibration_tranche_values = snp_recalibration_tranche_values,
+          recalibration_annotation_values = snp_recalibration_annotation_values,
+          hapmap_resource_vcf = hapmap_resource_vcf,
+          hapmap_resource_vcf_index = hapmap_resource_vcf_index,
+          omni_resource_vcf = omni_resource_vcf,
+          omni_resource_vcf_index = omni_resource_vcf_index,
+          one_thousand_genomes_resource_vcf = one_thousand_genomes_resource_vcf,
+          one_thousand_genomes_resource_vcf_index = one_thousand_genomes_resource_vcf_index,
+          dbsnp_resource_vcf = dbsnp_resource_vcf,
+          dbsnp_resource_vcf_index = dbsnp_resource_vcf_index,
+          use_allele_specific_annotations = allele_specific_annotations,
+          disk_size = small_disk
+      }
+    }
+
+    scatter (idx in range(length(HardFilterAndMakeSitesOnlyVcf.variant_filtered_vcf))) {
+      #for really large callsets we give to friends, just apply filters to the sites-only
+      call ApplyRecalibration {
+        input:
+          recalibrated_vcf_filename = callset_name + ".filtered." + idx + ".vcf.gz",
+          input_vcf = HardFilterAndMakeSitesOnlyVcf.variant_filtered_vcf[idx],
+          input_vcf_index = HardFilterAndMakeSitesOnlyVcf.variant_filtered_vcf_index[idx],
+          indels_recalibration = IndelsVariantRecalibrator.recalibration,
+          indels_recalibration_index = IndelsVariantRecalibrator.recalibration_index,
+          indels_tranches = IndelsVariantRecalibrator.tranches,
+          snps_recalibration = if defined(SNPsVariantRecalibratorScattered.recalibration) then select_first([SNPsVariantRecalibratorScattered.recalibration])[idx] else select_first([SNPsVariantRecalibratorClassic.recalibration]),
+          snps_recalibration_index = if defined(SNPsVariantRecalibratorScattered.recalibration_index) then select_first([SNPsVariantRecalibratorScattered.recalibration_index])[idx] else select_first([SNPsVariantRecalibratorClassic.recalibration_index]),
+          snps_tranches = select_first([SNPGatherTranches.tranches_file, SNPsVariantRecalibratorClassic.tranches]),
+          indel_filter_level = indel_filter_level,
+          snp_filter_level = snp_filter_level,
+          use_allele_specific_annotations = allele_specific_annotations,
+          disk_size = medium_disk
+      }
+
+      # For large callsets we need to collect metrics from the shards and gather them later.
+      if (!is_small_callset) {
+        call Tasks.CollectVariantCallingMetrics as CollectMetricsSharded {
+          input:
+            input_vcf = ApplyRecalibration.recalibrated_vcf,
+            input_vcf_index = ApplyRecalibration.recalibrated_vcf_index,
+            metrics_filename_prefix = callset_name + "." + idx,
+            dbsnp_vcf = dbsnp_vcf,
+            dbsnp_vcf_index = dbsnp_vcf_index,
+            interval_list = eval_interval_list,
+            ref_dict = ref_dict,
+            disk_size = medium_disk
+        }
+      }
+    }
+
+    # For small callsets we can gather the VCF shards and then collect metrics on it.
+    if (is_small_callset) {
+      call GatherVcfs as FinalGatherVcf {
+        input:
+          input_vcfs = ApplyRecalibration.recalibrated_vcf,
+          output_vcf_name = callset_name + ".vcf.gz",
+          disk_size = huge_disk
+      }
+
+      call Tasks.CollectVariantCallingMetrics as CollectMetricsOnFullVcf {
+        input:
+          input_vcf = FinalGatherVcf.output_vcf,
+          input_vcf_index = FinalGatherVcf.output_vcf_index,
+          metrics_filename_prefix = callset_name,
           dbsnp_vcf = dbsnp_vcf,
           dbsnp_vcf_index = dbsnp_vcf_index,
           interval_list = eval_interval_list,
           ref_dict = ref_dict,
+          disk_size = large_disk
+      }
+    }
+
+    if (!is_small_callset) {
+      # For large callsets we still need to gather the sharded metrics.
+      call Tasks.GatherVariantCallingMetrics {
+        input:
+          input_details = select_all(CollectMetricsSharded.detail_metrics_file),
+          input_summaries = select_all(CollectMetricsSharded.summary_metrics_file),
+          output_prefix = callset_name,
           disk_size = medium_disk
       }
     }
+
+#    if (cross_check_fingerprints) {
+#      # CrossCheckFingerprints takes forever on large callsets.
+#      # We scatter over the input GVCFs to make things faster.
+#      if (scatter_cross_check_fingerprints) {
+#        call Tasks.GetFingerprintingIntervalIndices {
+#          input:
+#            unpadded_intervals = unpadded_intervals,
+#            haplotype_database = haplotype_database
+#        }
+#
+#        Array[Int] fingerprinting_indices = GetFingerprintingIntervalIndices.indices_to_fingerprint
+#
+#        scatter (idx in fingerprinting_indices) {
+#          File vcfs_to_fingerprint = HardFilterAndMakeSitesOnlyVcf.variant_filtered_vcf[idx]
+#        }
+#    
+#        call GatherVcfs as GatherFingerprintingVcfs {
+#          input:
+#            input_vcfs = vcfs_to_fingerprint,
+#            output_vcf_name = callset_name + ".gathered.fingerprinting.vcf.gz",
+#            disk_size = medium_disk
+#        }
+#
+#        call Tasks.SelectFingerprintSiteVariants {
+#          input:
+#            input_vcf = GatherFingerprintingVcfs.output_vcf,
+#            base_output_name = callset_name + ".fingerprinting",
+#            haplotype_database = haplotype_database,
+#            disk_size = medium_disk
+#        }
+#
+#        call Tasks.PartitionSampleNameMap {
+#          input:
+#            sample_name_map = sample_name_map,
+#            line_limit = 1000
+#        }
+#
+#        scatter (idx in range(length(PartitionSampleNameMap.partitions))) {
+#
+#          Array[File] files_in_partition = read_lines(PartitionSampleNameMap.partitions[idx])
+#
+#          call Tasks.CrossCheckFingerprint as CrossCheckFingerprintsScattered {
+#            input:
+#              gvcf_paths = files_in_partition,
+#              vcf_paths = vcfs_to_fingerprint,
+#              sample_name_map = sample_name_map,
+#              haplotype_database = haplotype_database,
+#              output_base_name = callset_name + "." + idx,
+#              scattered = true
+#          }
+#        }
+#
+#        call Tasks.GatherPicardMetrics as GatherFingerprintingMetrics {
+#          input:
+#            metrics_files = CrossCheckFingerprintsScattered.crosscheck_metrics,
+#            output_file_name = callset_name + ".fingerprintcheck",
+#            disk_size = small_disk
+#        }
+#      }
+#
+#      if (!scatter_cross_check_fingerprints) {
+#
+#        scatter (line in sample_name_map_lines) {
+#          File gvcf_paths = line[1]
+#        }
+#
+#        call Tasks.CrossCheckFingerprint as CrossCheckFingerprintSolo {
+#          input:
+#            gvcf_paths = gvcf_paths,
+#            vcf_paths = ApplyRecalibration.recalibrated_vcf,
+#            sample_name_map = sample_name_map,
+#            haplotype_database = haplotype_database,
+#            output_base_name = callset_name
+#        }
+#      }
+#    }
+
+    # Get the metrics from either code path
+    File output_detail_metrics_file = select_first([CollectMetricsOnFullVcf.detail_metrics_file, GatherVariantCallingMetrics.detail_metrics_file])
+    File output_summary_metrics_file = select_first([CollectMetricsOnFullVcf.summary_metrics_file, GatherVariantCallingMetrics.summary_metrics_file])
+
+    # Get the VCFs from either code path
+    Array[File?] output_vcf_files = if defined(FinalGatherVcf.output_vcf) then [FinalGatherVcf.output_vcf] else ApplyRecalibration.recalibrated_vcf
+    Array[File?] output_vcf_index_files = if defined(FinalGatherVcf.output_vcf_index) then [FinalGatherVcf.output_vcf_index] else ApplyRecalibration.recalibrated_vcf_index
   }
-
-  # For small callsets we can gather the VCF shards and then collect metrics on it.
-  if (is_small_callset) {
-    call Tasks.GatherVcfs as FinalGatherVcf {
-      input:
-        input_vcfs = ApplyRecalibration.recalibrated_vcf,
-        output_vcf_name = callset_name + ".vcf.gz",
-        disk_size = huge_disk
-    }
-
-    call Tasks.CollectVariantCallingMetrics as CollectMetricsOnFullVcf {
-      input:
-        input_vcf = FinalGatherVcf.output_vcf,
-        input_vcf_index = FinalGatherVcf.output_vcf_index,
-        metrics_filename_prefix = callset_name,
-        dbsnp_vcf = dbsnp_vcf,
-        dbsnp_vcf_index = dbsnp_vcf_index,
-        interval_list = eval_interval_list,
-        ref_dict = ref_dict,
-        disk_size = large_disk
-    }
-  }
-
-  if (!is_small_callset) {
-    # For large callsets we still need to gather the sharded metrics.
-    call Tasks.GatherVariantCallingMetrics {
-      input:
-        input_details = select_all(CollectMetricsSharded.detail_metrics_file),
-        input_summaries = select_all(CollectMetricsSharded.summary_metrics_file),
-        output_prefix = callset_name,
-        disk_size = medium_disk
-    }
-  }
-
-  # WE DO NOT NEED FINGERPRINT CHECKS - comment out
-  # # CrossCheckFingerprints takes forever on large callsets.
-  # # We scatter over the input GVCFs to make things faster.
-  # if (scatter_cross_check_fingerprints) {
-  #   call Tasks.GetFingerprintingIntervalIndices {
-  #     input:
-  #       unpadded_intervals = unpadded_intervals,
-  #       haplotype_database = haplotype_database
-  #   }
-
-  #   Array[Int] fingerprinting_indices = GetFingerprintingIntervalIndices.indices_to_fingerprint
-
-  #   scatter (idx in fingerprinting_indices) {
-  #     File vcfs_to_fingerprint = HardFilterAndMakeSitesOnlyVcf.variant_filtered_vcf[idx]
-  #   }
-
-  #   call Tasks.GatherVcfs as GatherFingerprintingVcfs {
-  #     input:
-  #       input_vcfs = vcfs_to_fingerprint,
-  #       output_vcf_name = callset_name + ".gathered.fingerprinting.vcf.gz",
-  #       disk_size = medium_disk
-  #   }
-
-  #   call Tasks.SelectFingerprintSiteVariants {
-  #     input:
-  #       input_vcf = GatherFingerprintingVcfs.output_vcf,
-  #       base_output_name = callset_name + ".fingerprinting",
-  #       haplotype_database = haplotype_database,
-  #       disk_size = medium_disk
-  #   }
-
-  #   call Tasks.PartitionSampleNameMap {
-  #     input:
-  #       sample_name_map = sample_name_map,
-  #       line_limit = 1000
-  #   }
-
-  #   scatter (idx in range(length(PartitionSampleNameMap.partitions))) {
-
-  #     Array[File] files_in_partition = read_lines(PartitionSampleNameMap.partitions[idx])
-
-  #     call Tasks.CrossCheckFingerprint as CrossCheckFingerprintsScattered {
-  #       input:
-  #         gvcf_paths = files_in_partition,
-  #         vcf_paths = vcfs_to_fingerprint,
-  #         sample_name_map = sample_name_map,
-  #         haplotype_database = haplotype_database,
-  #         output_base_name = callset_name + "." + idx,
-  #         scattered = true
-  #     }
-  #   }
-
-  #   call Tasks.GatherPicardMetrics as GatherFingerprintingMetrics {
-  #     input:
-  #       metrics_files = CrossCheckFingerprintsScattered.crosscheck_metrics,
-  #       output_file_name = callset_name + ".fingerprintcheck",
-  #       disk_size = small_disk
-  #   }
-  # }
-
-  # if (!scatter_cross_check_fingerprints) {
-
-  #   scatter (line in sample_name_map_lines) {
-  #     File gvcf_paths = line[1]
-  #   }
-
-  #   call Tasks.CrossCheckFingerprint as CrossCheckFingerprintSolo {
-  #     input:
-  #       gvcf_paths = gvcf_paths,
-  #       vcf_paths = ApplyRecalibration.recalibrated_vcf,
-  #       sample_name_map = sample_name_map,
-  #       haplotype_database = haplotype_database,
-  #       output_base_name = callset_name
-  #   }
-  # }
-
-  # Get the metrics from either code path
-  File output_detail_metrics_file = select_first([CollectMetricsOnFullVcf.detail_metrics_file, GatherVariantCallingMetrics.detail_metrics_file])
-  File output_summary_metrics_file = select_first([CollectMetricsOnFullVcf.summary_metrics_file, GatherVariantCallingMetrics.summary_metrics_file])
-
-  # Get the VCFs from either code path
-  Array[File?] output_vcf_files = if defined(FinalGatherVcf.output_vcf) then [FinalGatherVcf.output_vcf] else ApplyRecalibration.recalibrated_vcf
-  Array[File?] output_vcf_index_files = if defined(FinalGatherVcf.output_vcf_index) then [FinalGatherVcf.output_vcf_index] else ApplyRecalibration.recalibrated_vcf_index
 
   output {
-    # Metrics from either the small or large callset
-    File detail_metrics_file = output_detail_metrics_file
-    File summary_metrics_file = output_summary_metrics_file
+    File? detail_metrics_file = output_detail_metrics_file
+    File? summary_metrics_file = output_summary_metrics_file
 
     # Outputs from the small callset path through the wdl.
     Array[File] output_vcfs = select_all(output_vcf_files)
@@ -479,9 +488,8 @@ workflow JointGenotyping {
     # Output the interval list generated/used by this run workflow.
     Array[File] output_workspaces = genomicsdb_tar
 
-    # Disable fingerprint check outputs
-    # # Output the metrics from crosschecking fingerprints.
-    # File crosscheck_fingerprint_check = select_first([CrossCheckFingerprintSolo.crosscheck_metrics, GatherFingerprintingMetrics.gathered_metrics])
+    # Output the metrics from crosschecking fingerprints.
+#    File? crosscheck_fingerprint_check = select_first([CrossCheckFingerprintSolo.crosscheck_metrics, GatherFingerprintingMetrics.gathered_metrics])
   }
   meta {
     allowNestedInputs: true
@@ -674,5 +682,193 @@ task GenotypeGVCFs {
   output {
     File output_vcf = "~{output_vcf_filename}"
     File output_vcf_index = "~{output_vcf_filename}.tbi"
+  }
+}
+
+task GatherVcfs {
+
+  input {
+    Array[File?] input_vcfs
+    String output_vcf_name
+    Int disk_size
+    String gatk_docker = "us.gcr.io/broad-gatk/gatk:4.2.6.1"
+  }
+
+  parameter_meta {
+    input_vcfs: {
+      localization_optional: true
+    }
+  }
+
+  command <<<
+    set -euo pipefail
+
+    # --ignore-safety-checks makes a big performance difference so we include it in our invocation.
+    # This argument disables expensive checks that the file headers contain the same set of
+    # genotyped samples and that files are in order by position of first record.
+    gatk --java-options "-Xms6000m -Xmx6500m" \
+      GatherVcfsCloud \
+      --ignore-safety-checks \
+      --gather-type BLOCK \
+      --input ~{sep=" --input " input_vcfs} \
+      --output ~{output_vcf_name}
+
+    tabix ~{output_vcf_name}
+  >>>
+
+  runtime {
+    memory: "7000 MiB"
+    cpu: "1"
+    bootDiskSizeGb: 15
+    disks: "local-disk " + disk_size + " HDD"
+    preemptible: 1
+    docker: gatk_docker
+  }
+
+  output {
+    File output_vcf = "~{output_vcf_name}"
+    File output_vcf_index = "~{output_vcf_name}.tbi"
+  }
+}
+
+task SNPsVariantRecalibrator {
+
+  input {
+    String recalibration_filename
+    String tranches_filename
+    File? model_report
+
+    Array[String] recalibration_tranche_values
+    Array[String] recalibration_annotation_values
+
+    File? sites_only_variant_filtered_vcf
+    File? sites_only_variant_filtered_vcf_index
+
+    File hapmap_resource_vcf
+    File omni_resource_vcf
+    File one_thousand_genomes_resource_vcf
+    File dbsnp_resource_vcf
+    File hapmap_resource_vcf_index
+    File omni_resource_vcf_index
+    File one_thousand_genomes_resource_vcf_index
+    File dbsnp_resource_vcf_index
+    Boolean use_allele_specific_annotations
+    Int max_gaussians = 6
+
+    Int disk_size
+    String gatk_docker = "us.gcr.io/broad-gatk/gatk:4.2.6.1"
+    Int? machine_mem_mb
+
+  }
+
+  Int auto_mem = ceil(2 * size([sites_only_variant_filtered_vcf,
+                              hapmap_resource_vcf,
+                              omni_resource_vcf,
+                              one_thousand_genomes_resource_vcf,
+                              dbsnp_resource_vcf],
+                      "MiB"))
+  Int machine_mem = select_first([machine_mem_mb, if auto_mem < 7000 then 7000 else auto_mem])
+  Int java_mem = machine_mem - 1000
+  Int max_heap = machine_mem - 500
+
+
+  String model_report_arg = if defined(model_report) then "--input-model $MODEL_REPORT --output-tranches-for-scatter" else ""
+
+  command <<<
+    set -euo pipefail
+
+    MODEL_REPORT=~{model_report}
+
+    gatk --java-options "-Xms~{java_mem}m -Xmx~{max_heap}m" \
+      VariantRecalibrator \
+      -V ~{sites_only_variant_filtered_vcf} \
+      -O ~{recalibration_filename} \
+      --tranches-file ~{tranches_filename} \
+      --trust-all-polymorphic \
+      -tranche ~{sep=' -tranche ' recalibration_tranche_values} \
+      -an ~{sep=' -an ' recalibration_annotation_values} \
+      ~{true='--use-allele-specific-annotations' false='' use_allele_specific_annotations} \
+      -mode SNP \
+      ~{model_report_arg} \
+      --max-gaussians ~{max_gaussians} \
+      -resource:hapmap,known=false,training=true,truth=true,prior=15 ~{hapmap_resource_vcf} \
+      -resource:omni,known=false,training=true,truth=true,prior=12 ~{omni_resource_vcf} \
+      -resource:1000G,known=false,training=true,truth=false,prior=10 ~{one_thousand_genomes_resource_vcf} \
+      -resource:dbsnp,known=true,training=false,truth=false,prior=7 ~{dbsnp_resource_vcf}
+  >>>
+
+  runtime {
+    memory: "~{machine_mem} MiB"
+    cpu: 2
+    bootDiskSizeGb: 15
+    disks: "local-disk " + disk_size + " HDD"
+    preemptible: 1
+    docker: gatk_docker
+  }
+
+  output {
+    File recalibration = "~{recalibration_filename}"
+    File recalibration_index = "~{recalibration_filename}.idx"
+    File tranches = "~{tranches_filename}"
+  }
+}
+
+task ApplyRecalibration {
+
+  input {
+    String recalibrated_vcf_filename
+    File? input_vcf
+    File? input_vcf_index
+    File? indels_recalibration
+    File? indels_recalibration_index
+    File? indels_tranches
+    File? snps_recalibration
+    File? snps_recalibration_index
+    File? snps_tranches
+    Float indel_filter_level
+    Float snp_filter_level
+    Boolean use_allele_specific_annotations
+    Int disk_size
+    String gatk_docker = "us.gcr.io/broad-gatk/gatk:4.2.6.1"
+  }
+
+  command <<<
+    set -euo pipefail
+
+    gatk --java-options "-Xms5000m -Xmx6500m" \
+      ApplyVQSR \
+      -O tmp.indel.recalibrated.vcf \
+      -V ~{input_vcf} \
+      --recal-file ~{indels_recalibration} \
+      ~{true='--use-allele-specific-annotations' false='' use_allele_specific_annotations} \
+      --tranches-file ~{indels_tranches} \
+      --truth-sensitivity-filter-level ~{indel_filter_level} \
+      --create-output-variant-index true \
+      -mode INDEL
+
+    gatk --java-options "-Xms5000m -Xmx6500m" \
+      ApplyVQSR \
+      -O ~{recalibrated_vcf_filename} \
+      -V tmp.indel.recalibrated.vcf \
+      --recal-file ~{snps_recalibration} \
+      ~{true='--use-allele-specific-annotations' false='' use_allele_specific_annotations} \
+      --tranches-file ~{snps_tranches} \
+      --truth-sensitivity-filter-level ~{snp_filter_level} \
+      --create-output-variant-index true \
+      -mode SNP
+  >>>
+
+  runtime {
+    memory: "7000 MiB"
+    cpu: "1"
+    bootDiskSizeGb: 15
+    disks: "local-disk " + disk_size + " HDD"
+    preemptible: 1
+    docker: gatk_docker
+  }
+
+  output {
+    File recalibrated_vcf = "~{recalibrated_vcf_filename}"
+    File recalibrated_vcf_index = "~{recalibrated_vcf_filename}.tbi"
   }
 }
