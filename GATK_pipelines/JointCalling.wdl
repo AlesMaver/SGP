@@ -183,7 +183,7 @@ workflow JointGenotyping {
     }
 
     if (!use_gnarly_genotyper) {
-      call Tasks.GenotypeGVCFs {
+      call GenotypeGVCFs {
         input:
           workspace_tar = genomicsdb_tar,
           interval = unpadded_intervals[idx],
@@ -612,5 +612,67 @@ task ImportGVCFs_update {
 
   output {
     File output_genomicsdb = "~{workspace_dir_name}.tar"
+  }
+}
+
+task GenotypeGVCFs {
+
+  input {
+    File workspace_tar
+    File interval
+
+    String output_vcf_filename
+
+    File ref_fasta
+    File ref_fasta_index
+    File ref_dict
+
+    String dbsnp_vcf
+
+    Int disk_size
+    # This is needed for gVCFs generated with GATK3 HaplotypeCaller
+    Boolean allow_old_rms_mapping_quality_annotation_data = false
+    String gatk_docker = "us.gcr.io/broad-gatk/gatk:4.2.6.1"
+  }
+
+  parameter_meta {
+    interval: {
+      localization_optional: true
+    }
+  }
+
+  command <<<
+    set -euo pipefail
+
+    tar -xf ~{workspace_tar}
+    WORKSPACE=$(basename ~{workspace_tar} .tar)
+
+    gatk --java-options "-Xms8000m -Xmx25000m" \
+      GenotypeGVCFs \
+      -R ~{ref_fasta} \
+      -O ~{output_vcf_filename} \
+      -D ~{dbsnp_vcf} \
+      -G StandardAnnotation -G AS_StandardAnnotation \
+      --only-output-calls-starting-in-intervals \
+      -V gendb://$WORKSPACE \
+      -L ~{interval} \
+      ~{true='--allow-old-rms-mapping-quality-annotation-data' false='' allow_old_rms_mapping_quality_annotation_data} \
+      --merge-input-intervals \
+      --max-alternate-alleles 4 \
+      --genomicsdb-max-alternate-alleles 7
+  >>>
+
+  runtime {
+    memory: "26000 MiB"
+    cpu: 2
+    bootDiskSizeGb: 15
+    disks: "local-disk " + disk_size + " HDD"
+    preemptible: 1
+    docker: gatk_docker
+  }
+
+  output {
+    File output_vcf = "~{output_vcf_filename}"
+    File output_vcf_index = "~{output_vcf_filename}.tbi"
   }
 }
