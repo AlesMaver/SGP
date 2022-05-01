@@ -490,7 +490,7 @@ task ImportGDB {
 
     # tar -xf ~{workspace_tar}
     # tar -cf ~{workspace_dir_name}.tar ~{workspace_dir_name}
-    cp ~{workspace_tar} ~{workspace_dir_name}.tar
+    cp -lf ~{workspace_tar} ~{workspace_dir_name}.tar
   >>>
 
   runtime {
