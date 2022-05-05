@@ -536,6 +536,7 @@ task ImportGVCFs_import {
       --consolidate
 
     tar -cf ~{workspace_dir_name}.tar ~{workspace_dir_name}
+    rm -rf ~{workspace_dir_name}
   >>>
 
   runtime {
@@ -600,6 +601,7 @@ task ImportGVCFs_update {
       --consolidate
 
     tar -cf ~{workspace_dir_name}.tar ~{workspace_dir_name}
+    rm -rf ~{workspace_dir_name}
   >>>
 
   runtime {
@@ -871,6 +873,8 @@ task GenotypeGVCFs {
       -L ~{interval} \
       ~{true='--allow-old-rms-mapping-quality-annotation-data' false='' allow_old_rms_mapping_quality_annotation_data} \
       --merge-input-intervals
+      
+    rm -rf $WORKSPACE
   >>>
 
   runtime {
