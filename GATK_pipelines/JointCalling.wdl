@@ -579,7 +579,12 @@ task ImportGVCFs_update {
   command <<<
     set -euo pipefail
 
-    tar -xf ~{workspace_tar}
+    # Introduce a random delay of the job start - maximum is 30 minutes
+    sleep $[ ($RANDOM % 1800) + 1 ]s
+
+    # Introduce a random delay of 1-30 secs for extraction (for the maximum of 27 minutes) of each file in tar to spread the load on CEPH drives
+    for file in $( tar -tf ~{workspace_tar} ); do echo "Delaying extraction of the $file"; sleep $[ ($RANDOM % 10) + 1 ]s; tar -xf ~{workspace_tar} $file; done    
+    
     WORKSPACE=$(basename ~{workspace_tar} .tar)
 
     # We've seen some GenomicsDB performance regressions related to intervals, so we're going to pretend we only have a single interval
@@ -858,8 +863,13 @@ task GenotypeGVCFs {
 
   command <<<
     set -euo pipefail
+    
+    # Introduce a random delay of the job start - maximum is 30 minutes
+    sleep $[ ($RANDOM % 1800) + 1 ]s
 
-    tar -xf ~{workspace_tar}
+    # Introduce a random delay of 1-30 secs for extraction (for the maximum of 27 minutes) of each file in tar to spread the load on CEPH drives
+    for file in $( tar -tf ~{workspace_tar} ); do echo "Delaying extraction of the $file"; sleep $[ ($RANDOM % 10) + 1 ]s; tar -xf ~{workspace_tar} $file; done    
+    
     WORKSPACE=$(basename ~{workspace_tar} .tar)
 
     gatk --java-options "-Xms8000m -Xmx12000m" \
