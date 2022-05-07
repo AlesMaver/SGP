@@ -583,7 +583,7 @@ task ImportGVCFs_update {
     sleep $[ ($RANDOM % 1800) + 1 ]s
 
     # Introduce a random delay of 1-30 secs for extraction (for the maximum of 27 minutes) of each file in tar to spread the load on CEPH drives
-    for file in $( tar -tf ~{workspace_tar} ); do echo "Delaying extraction of the $file"; sleep $[ ($RANDOM % 10) + 1 ]s; tar -xf ~{workspace_tar} $file; done    
+    for file in $( tar -tf ~{workspace_tar} ); do echo "Delaying extraction of the $file"; sleep $[ ($RANDOM % 30) + 1 ]s; tar -xf ~{workspace_tar} $file; done    
     
     WORKSPACE=$(basename ~{workspace_tar} .tar)
 
@@ -868,7 +868,7 @@ task GenotypeGVCFs {
     sleep $[ ($RANDOM % 1800) + 1 ]s
 
     # Introduce a random delay of 1-30 secs for extraction (for the maximum of 27 minutes) of each file in tar to spread the load on CEPH drives
-    for file in $( tar -tf ~{workspace_tar} ); do echo "Delaying extraction of the $file"; sleep $[ ($RANDOM % 10) + 1 ]s; tar -xf ~{workspace_tar} $file; done    
+    for file in $( tar -tf ~{workspace_tar} ); do echo "Delaying extraction of the $file"; sleep $[ ($RANDOM % 30) + 1 ]s; tar -xf ~{workspace_tar} $file; done    
     
     WORKSPACE=$(basename ~{workspace_tar} .tar)
 
