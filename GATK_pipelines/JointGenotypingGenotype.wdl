@@ -494,7 +494,7 @@ task ImportGDB {
   >>>
 
   runtime {
-    memory: "7000 MiB"
+    memory: "3750 MiB"
     cpu: 1
     bootDiskSizeGb: 15
     disks: "local-disk " + disk_size + " HDD"
