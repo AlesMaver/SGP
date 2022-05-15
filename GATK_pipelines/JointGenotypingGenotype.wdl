@@ -329,15 +329,16 @@ workflow JointGenotyping {
     }
   }
 
-  # For small callsets we can gather the VCF shards and then collect metrics on it.
-  if (is_small_callset) {
-    call Tasks.GatherVcfs as FinalGatherVcf {
-      input:
-        input_vcfs = ApplyRecalibration.recalibrated_vcf,
-        output_vcf_name = callset_name + ".vcf.gz",
-        disk_size = huge_disk
-    }
+  # For small and large callsets we gather the VCF shards.
+  call Tasks.GatherVcfs as FinalGatherVcf {
+    input:
+      input_vcfs = ApplyRecalibration.recalibrated_vcf,
+      output_vcf_name = callset_name + ".vcf.gz",
+      disk_size = huge_disk
+  }
 
+  # For small callsets we collect metrics on a gathered VCF
+  if (is_small_callset) {
     call Tasks.CollectVariantCallingMetrics as CollectMetricsOnFullVcf {
       input:
         input_vcf = FinalGatherVcf.output_vcf,
@@ -351,8 +352,8 @@ workflow JointGenotyping {
     }
   }
 
+  # For large callsets we still need to gather the sharded metrics.
   if (!is_small_callset) {
-    # For large callsets we still need to gather the sharded metrics.
     call Tasks.GatherVariantCallingMetrics {
       input:
         input_details = select_all(CollectMetricsSharded.detail_metrics_file),
