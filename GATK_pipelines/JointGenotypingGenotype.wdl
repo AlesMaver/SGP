@@ -241,7 +241,7 @@ workflow JointGenotyping {
     }
 
     scatter (idx in range(length(HardFilterAndMakeSitesOnlyVcf.sites_only_vcf))) {
-      call Tasks.SNPsVariantRecalibrator as SNPsVariantRecalibratorScattered {
+      call SNPsVariantRecalibrator as SNPsVariantRecalibratorScattered {
         input:
           sites_only_variant_filtered_vcf = HardFilterAndMakeSitesOnlyVcf.sites_only_vcf[idx],
           sites_only_variant_filtered_vcf_index = HardFilterAndMakeSitesOnlyVcf.sites_only_vcf_index[idx],
