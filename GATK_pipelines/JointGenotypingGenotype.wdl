@@ -199,7 +199,7 @@ workflow JointGenotyping {
       disk_size = medium_disk
   }
 
-  call Tasks.IndelsVariantRecalibrator {
+  call IndelsVariantRecalibrator {
     input:
       sites_only_variant_filtered_vcf = SitesOnlyGatherVcf.output_vcf,
       sites_only_variant_filtered_vcf_index = SitesOnlyGatherVcf.output_vcf_index,
@@ -509,7 +509,7 @@ task ImportGDB {
 }
 
 
-# Override
+# Override GDB; removed cpu, before 2, recommended 8
 task GenotypeGVCFs {
 
   input {
@@ -572,6 +572,7 @@ task GenotypeGVCFs {
   }
 }
 
+# Override: removed cpu, before 2, recommended 8
 task SNPsVariantRecalibrator {
 
   input {
@@ -640,7 +641,68 @@ task SNPsVariantRecalibrator {
 
   runtime {
     memory: "~{machine_mem} MiB"
-    cpu: 8
+    # cpu: 8 # Removed in order to facilitate setting it through runtime attributes and thus increase assigned memory
+    bootDiskSizeGb: 15
+    disks: "local-disk " + disk_size + " HDD"
+    preemptible: 1
+    docker: gatk_docker
+  }
+
+  output {
+    File recalibration = "~{recalibration_filename}"
+    File recalibration_index = "~{recalibration_filename}.idx"
+    File tranches = "~{tranches_filename}"
+  }
+}
+
+# Override: removed cpu, before 2, recommended 8
+task IndelsVariantRecalibrator {
+
+  input {
+    String recalibration_filename
+    String tranches_filename
+
+    Array[String] recalibration_tranche_values
+    Array[String] recalibration_annotation_values
+
+    File sites_only_variant_filtered_vcf
+    File sites_only_variant_filtered_vcf_index
+
+    File mills_resource_vcf
+    File axiomPoly_resource_vcf
+    File dbsnp_resource_vcf
+    File mills_resource_vcf_index
+    File axiomPoly_resource_vcf_index
+    File dbsnp_resource_vcf_index
+    Boolean use_allele_specific_annotations
+    Int max_gaussians = 4
+
+    Int disk_size
+    String gatk_docker = "us.gcr.io/broad-gatk/gatk:4.2.6.1"
+  }
+
+  command <<<
+    set -euo pipefail
+
+    gatk --java-options "-Xms24000m -Xmx25000m" \
+      VariantRecalibrator \
+      -V ~{sites_only_variant_filtered_vcf} \
+      -O ~{recalibration_filename} \
+      --tranches-file ~{tranches_filename} \
+      --trust-all-polymorphic \
+      -tranche ~{sep=' -tranche ' recalibration_tranche_values} \
+      -an ~{sep=' -an ' recalibration_annotation_values} \
+      ~{true='--use-allele-specific-annotations' false='' use_allele_specific_annotations} \
+      -mode INDEL \
+      --max-gaussians ~{max_gaussians} \
+      -resource:mills,known=false,training=true,truth=true,prior=12 ~{mills_resource_vcf} \
+      -resource:axiomPoly,known=false,training=true,truth=false,prior=10 ~{axiomPoly_resource_vcf} \
+      -resource:dbsnp,known=true,training=false,truth=false,prior=2 ~{dbsnp_resource_vcf}
+  >>>
+
+  runtime {
+    memory: "26000 MiB"
+    # cpu: "2" # Removed in order to facilitate setting it through runtime attributes and thus increase assigned memory
     bootDiskSizeGb: 15
     disks: "local-disk " + disk_size + " HDD"
     preemptible: 1
