@@ -559,7 +559,7 @@ task GenotypeGVCFs {
 
   runtime {
     memory: "26000 MiB"
-    cpu: 2
+    # cpu: 2 # Removed in order to facilitate setting it through runtime attributes and thus increase assigned memory
     bootDiskSizeGb: 15
     disks: "local-disk " + disk_size + " HDD"
     preemptible: 1
