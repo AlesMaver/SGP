@@ -640,7 +640,7 @@ task SNPsVariantRecalibrator {
 
   runtime {
     memory: "~{machine_mem} MiB"
-    cpu: 8
+    cpu: 16
     bootDiskSizeGb: 15
     disks: "local-disk " + disk_size + " HDD"
     preemptible: 1
