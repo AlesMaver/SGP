@@ -603,7 +603,7 @@ task SNPsVariantRecalibrator {
 
   }
 
-  Int auto_mem = ceil(2 * size([sites_only_variant_filtered_vcf,
+  Int auto_mem = ceil(3 * size([sites_only_variant_filtered_vcf,
                               hapmap_resource_vcf,
                               omni_resource_vcf,
                               one_thousand_genomes_resource_vcf,
