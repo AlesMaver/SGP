@@ -1,4 +1,4 @@
-# Oblika zbranih podatkov in specifikacije analize - Predlog (SI)
+# Oblika zbranih podatkov in specifikacije analize (SI)
 ## Vhodni podatki
 Vhodni podatek | Format | Imenovanje | Opis
 --- | --- | --- | ---
