@@ -114,7 +114,7 @@ task SamToFastqAndBwaMemAndMba {
     memory: "14 GiB"
     cpu: "4"
     requested_memory_mb_per_core: 3000
-    runtime_minutes: 1200
+    # runtime_minutes: 1200 # Removed in order to facilitate setting it through runtime attributes and thus increase runtime
     disks: "local-disk " + disk_size + " HDD"
   }
   output {
