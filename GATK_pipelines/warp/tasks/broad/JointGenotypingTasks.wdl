@@ -658,7 +658,7 @@ task GatherVcfs {
       GatherVcfsCloud \
       --ignore-safety-checks \
       --gather-type BLOCK \
-      --input ~{sep=" --input " input_vcfs} \
+      -I ~{sep=" -I " input_vcfs} \
       --output ~{output_vcf_name}
 
     tabix ~{output_vcf_name}
