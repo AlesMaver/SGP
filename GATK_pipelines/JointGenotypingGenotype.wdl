@@ -1,6 +1,6 @@
 version 1.0
 
-import "https://raw.githubusercontent.com/broadinstitute/warp/develop/tasks/broad/JointGenotypingTasks.wdl" as Tasks
+import "warp/tasks/broad/JointGenotypingTasks.wdl" as Tasks
 
 
 # Joint Genotyping for hg38 Whole Genomes and Exomes (has not been tested on hg19)
