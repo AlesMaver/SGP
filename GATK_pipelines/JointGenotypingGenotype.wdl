@@ -186,8 +186,10 @@ workflow JointGenotyping {
         vcf = genotyped_vcf,
         vcf_index = genotyped_vcf_index,
         excess_het_threshold = excess_het_threshold,
-        variant_filtered_vcf_filename = callset_name + "." + idx + ".variant_filtered.vcf.gz",
-        sites_only_vcf_filename = callset_name + "." + idx + ".sites_only.variant_filtered.vcf.gz",
+        ## variant_filtered_vcf_filename = callset_name + "." + idx + ".variant_filtered.vcf.gz",
+        variant_filtered_vcf_filename = callset_name + "." + idx + ".vf.vcf.gz",
+        ## sites_only_vcf_filename = callset_name + "." + idx + ".sites_only.variant_filtered.vcf.gz",
+        sites_only_vcf_filename = callset_name + "." + idx + ".so.vcf.gz",
         disk_size = medium_disk
     }
   }
