@@ -560,8 +560,8 @@ task GenotypeGVCFs {
   >>>
 
   runtime {
-    memory: "26000 MiB"
-    # cpu: 2 # Removed in order to facilitate setting it through runtime attributes and thus increase assigned memory
+    memory: "32000 MiB" # Increased from "26000 MiB" to fit default memory 8GB/core @ Vega
+    cpu: 4 # Increased 2->4 in order to facilitate obtain enough memory
     bootDiskSizeGb: 15
     disks: "local-disk " + disk_size + " HDD"
     preemptible: 1
@@ -574,7 +574,7 @@ task GenotypeGVCFs {
   }
 }
 
-# Override: cpu: 2 => 16 in order to obtain enough memory
+# Override: cpu: 2 => 16 in order to obtain enough memory (Vega: 4GB/thread, 8GB/core)
 task SNPsVariantRecalibrator {
 
   input {
