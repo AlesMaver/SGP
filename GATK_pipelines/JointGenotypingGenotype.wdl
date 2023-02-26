@@ -511,7 +511,12 @@ task ImportGDB {
 }
 
 
-# Override GDB; removed cpu, before 2, recommended 8
+# Override: cpu, before 2, used 4
+#           mem 26->32 GB, java mem 31 GB, default 25 GB
+# Added: --max-alternate-alleles 4, default 6
+#        --genomicsdb-max-alternate-alleles 7, default max-alternate-alleles + 3
+#        --max-genotype-count 256 (== 2^8); default 2^10=1024
+# Note: --disable-bam-index-caching: Caching is automatically disabled if there are no intervals specified.
 task GenotypeGVCFs {
 
   input {
@@ -556,7 +561,8 @@ task GenotypeGVCFs {
       ~{true='--allow-old-rms-mapping-quality-annotation-data' false='' allow_old_rms_mapping_quality_annotation_data} \
       --merge-input-intervals \
       --max-alternate-alleles 4 \
-      --genomicsdb-max-alternate-alleles 7
+      --genomicsdb-max-alternate-alleles 7 \
+      --max-genotype-count 256
   >>>
 
   runtime {
