@@ -544,7 +544,7 @@ task GenotypeGVCFs {
     tar -xf ~{workspace_tar}
     WORKSPACE=$(basename ~{workspace_tar} .tar)
 
-    gatk --java-options "-Xms8000m -Xmx25000m" \
+    gatk --java-options "-Xms8000m -Xmx31000m" \
       GenotypeGVCFs \
       -R ~{ref_fasta} \
       -O ~{output_vcf_filename} \
@@ -560,7 +560,7 @@ task GenotypeGVCFs {
   >>>
 
   runtime {
-    memory: "32000 MiB" # Increased from "26000 MiB" to fit default memory 8GB/core @ Vega
+    memory: "32000 MiB" # Increased from "26000 MiB" to fit default memory 8GB/core @ Vega; additionally increased -Xmx21000m -> -Xmx31000m
     cpu: 4 # Increased 2->4 in order to facilitate obtain enough memory
     bootDiskSizeGb: 15
     disks: "local-disk " + disk_size + " HDD"
